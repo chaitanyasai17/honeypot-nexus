@@ -1,0 +1,65 @@
+{% extends "honeypot/base.html" %}
+
+{% block title %}Database Telemetry Viewer — {{ company }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div style="margin-bottom: 24px;">
+    <h2 style="font-size: 20px; font-weight: 700;">Corporate Database Query Viewer</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">Read-only operational analytics query interface (SecureCorp MySQL cluster replica).</p>
+  </div>
+
+  {% if error %}
+  <div class="alert-danger" style="font-family: monospace; font-size: 13px;">
+    <strong>SQL Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <form method="GET" action="/database" style="display: flex; gap: 12px; margin-bottom: 24px; align-items: flex-end;">
+    <div style="width: 200px;">
+      <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Select Table</label>
+      <select name="table" class="form-control">
+        {% for t in tables %}
+        <option value="{{ t }}" {% if t == current_table %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="flex-grow: 1;">
+      <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Filter Query / Search Parameter</label>
+      <input type="text" name="q" value="{{ query }}" placeholder="e.g. search keyword, admin, or id" class="form-control">
+    </div>
+
+    <button type="submit" class="btn" style="height: 38px;">Run Query</button>
+  </form>
+
+  <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-muted);">
+    Returned <strong>{{ results|length }}</strong> rows from table <code>{{ current_table }}</code>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px; font-family: monospace;">
+      <thead>
+        <tr style="background: #f1f5f9; border-bottom: 2px solid var(--border); text-align: left;">
+          {% for h in headers %}
+          <th style="padding: 10px 12px;">{{ h }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if results %}
+          {% for row in results %}
+          <tr style="border-bottom: 1px solid var(--border);">
+            {% for h in headers %}
+            <td style="padding: 8px 12px;">{{ row.get(h, '') }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="{{ headers|length or 1 }}" style="text-align: center; padding: 24px; color: var(--text-muted);">No records found matching query criteria.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

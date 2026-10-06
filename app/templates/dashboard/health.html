@@ -1,0 +1,128 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}System Health — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">System Health & Daemon Telemetry</h1>
+    <div class="hn-page-sub">Host metrics, EventBus throughput, queue depth, and subsystem availability</div>
+  </div>
+  <div>
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadHealth();">⟳ Sample Diagnostics</button>
+  </div>
+</div>
+
+<!-- Hardware Resource Tiles -->
+<div class="hn-grid-12" style="margin-bottom: 24px;">
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 20px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Host CPU Utilization</div>
+      <div class="mono" id="valCpu" style="font-size: 32px; font-weight: 800; color: var(--hn-text); margin: 6px 0;">-- %</div>
+      <div class="hn-risk-track"><div id="barCpu" class="hn-risk-fill" style="width: 0%; background: var(--hn-accent);"></div></div>
+    </div>
+  </div>
+
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 20px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Memory Utilization</div>
+      <div class="mono" id="valMem" style="font-size: 32px; font-weight: 800; color: var(--hn-text); margin: 6px 0;">-- %</div>
+      <div class="hn-risk-track"><div id="barMem" class="hn-risk-fill" style="width: 0%; background: var(--hn-accent);"></div></div>
+    </div>
+  </div>
+
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 20px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Storage Disk Usage</div>
+      <div class="mono" id="valDisk" style="font-size: 32px; font-weight: 800; color: var(--hn-text); margin: 6px 0;">-- %</div>
+      <div class="hn-risk-track"><div id="barDisk" class="hn-risk-fill" style="width: 0%; background: var(--hn-accent);"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- EventBus Pipeline Telemetry -->
+<div class="hn-panel" style="margin-bottom: 24px; padding: 20px;">
+  <div class="hn-panel-title" style="margin-bottom: 16px;">Secure EventBus Throughput & Integrity</div>
+  <div class="hn-grid-12">
+    <div class="hn-col-3">
+      <div style="font-size: 11px; color: var(--hn-text-faint); text-transform: uppercase;">Queue Depth</div>
+      <div class="mono" id="busQueueDepth" style="font-size: 24px; font-weight: 800;">0</div>
+    </div>
+    <div class="hn-col-3">
+      <div style="font-size: 11px; color: var(--hn-text-faint); text-transform: uppercase;">Events Published</div>
+      <div class="mono" id="busPublished" style="font-size: 24px; font-weight: 800; color: var(--hn-accent);">0</div>
+    </div>
+    <div class="hn-col-3">
+      <div style="font-size: 11px; color: var(--hn-text-faint); text-transform: uppercase;">Processed / Persisted</div>
+      <div class="mono" id="busProcessed" style="font-size: 24px; font-weight: 800; color: var(--hn-ok);">0</div>
+    </div>
+    <div class="hn-col-3">
+      <div style="font-size: 11px; color: var(--hn-text-faint); text-transform: uppercase;">Dropped / Rejected</div>
+      <div class="mono" id="busDropped" style="font-size: 24px; font-weight: 800;">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Subsystems Table -->
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-panel-header">
+    <span class="hn-panel-title">Component & Service Health Matrix</span>
+  </div>
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Subsystem Name</th>
+          <th>Availability Status</th>
+          <th>Diagnostics Details</th>
+        </tr>
+      </thead>
+      <tbody id="servicesHealthBody">
+        <tr><td colspan="3" style="text-align: center; color: var(--hn-text-faint); padding: 24px;">Sampling diagnostics...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+
+  window.loadHealth = async function() {
+    try {
+      const h = await API.getHealth();
+
+      document.getElementById('valCpu').textContent = `${h.cpu}%`;
+      document.getElementById('barCpu').style.width = `${h.cpu}%`;
+
+      document.getElementById('valMem').textContent = `${h.memory}%`;
+      document.getElementById('barMem').style.width = `${h.memory}%`;
+
+      document.getElementById('valDisk').textContent = `${h.disk}%`;
+      document.getElementById('barDisk').style.width = `${h.disk}%`;
+
+      document.getElementById('busQueueDepth').textContent = h.eventbus.queue_depth;
+      document.getElementById('busPublished').textContent = h.eventbus.published;
+      document.getElementById('busProcessed').textContent = h.eventbus.processed;
+      document.getElementById('busDropped').textContent = `${h.eventbus.dropped + h.eventbus.rejected}`;
+
+      const tbody = document.getElementById('servicesHealthBody');
+      tbody.innerHTML = (h.services || []).map(s => `
+        <tr>
+          <td style="font-weight:600;">${esc(s.name)}</td>
+          <td>
+            <span style="background:rgba(63,182,139,0.14); color:var(--hn-ok); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">
+              ● ${esc(s.status.toUpperCase())}
+            </span>
+          </td>
+          <td style="color:var(--hn-text-dim); font-size:12px;">Active daemon responding without errors</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  loadHealth();
+</script>
+{% endblock %}

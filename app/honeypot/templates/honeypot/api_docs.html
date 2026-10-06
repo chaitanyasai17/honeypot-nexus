@@ -1,0 +1,50 @@
+{% extends "honeypot/base.html" %}
+
+{% block title %}REST API Documentation — {{ company }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div style="margin-bottom: 24px;">
+    <h2 style="font-size: 20px; font-weight: 700;">SecureCorp Core REST API (v1)</h2>
+    <p style="color: var(--text-muted); font-size: 13px;">Internal integration endpoints for telemetry, user provisioning, and service orchestration.</p>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+        <span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600;">/api/v1/users</code>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">List active corporate employees and identity directory.</p>
+      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/users</pre>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+        <span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600;">/api/v1/config</code>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Retrieve staging configuration parameters and database host settings.</p>
+      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/config</pre>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+        <span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600;">/api/v1/tokens</code>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Fetch service access tokens (requires Bearer authorization header).</p>
+      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s -H "Authorization: Bearer test_token" http://127.0.0.1:8080/api/v1/tokens</pre>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+        <span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600;">/api/v1/admin</code>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Restricted administrative controller interface.</p>
+      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/admin</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #0a0e17; }
+      .box { fill: #0f1523; stroke: #232c42; stroke-width: 1.5; rx: 8px; }
+      .box-hover:hover { stroke: #4c8dff; }
+      .title { fill: #e6ebf5; font-family: -apple-system, sans-serif; font-weight: 700; font-size: 15px; }
+      .subtitle { fill: #9aa6bf; font-family: -apple-system, sans-serif; font-size: 12px; }
+      .label { fill: #e6ebf5; font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 600; text-anchor: middle; }
+      .label-mono { fill: #38bdf8; font-family: monospace; font-size: 11px; text-anchor: middle; }
+      .tag { fill: #67738f; font-family: monospace; font-size: 10px; text-anchor: middle; }
+      .line { stroke: #33405c; stroke-width: 2; stroke-dasharray: 4,4; }
+      .arrow { stroke: #4c8dff; stroke-width: 2; marker-end: url(#arrowhead); }
+      .bus { fill: #151c2e; stroke: #4c8dff; stroke-width: 2; rx: 6px; }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#4c8dff" />
+    </marker>
+  </defs>
+
+  <rect width="1100" height="820" class="bg" />
+
+  <!-- Main Banner -->
+  <text x="550" y="45" fill="#e6ebf5" font-family="-apple-system, sans-serif" font-size="22" font-weight="800" text-anchor="middle">HONEYPOT NEXUS — THREE-LAYER SYSTEM ARCHITECTURE</text>
+  <text x="550" y="70" fill="#9aa6bf" font-family="-apple-system, sans-serif" font-size="13" text-anchor="middle">Honeypot-Based Intrusion Detection &amp; Live Attack Visualization Dashboard</text>
+
+  <!-- LAYER 1 -->
+  <rect x="50" y="100" width="1000" height="170" class="box" />
+  <rect x="65" y="112" width="220" height="24" fill="rgba(239, 70, 85, 0.15)" rx="4" />
+  <text x="75" y="128" fill="#ef4655" font-family="-apple-system, sans-serif" font-size="11" font-weight="700">LAYER 1 • PUBLIC WEB HONEYPOT</text>
+  <text x="300" y="128" fill="#67738f" font-family="monospace" font-size="11">PORT 8080 • UNTRUSTED • NO DATABASE • NO REAL FS • NO OS EXEC</text>
+
+  <!-- Honeypot Surfaces -->
+  <g transform="translate(70, 150)">
+    <!-- Login -->
+    <rect x="0" y="0" width="140" height="75" class="box" stroke="#33405c" />
+    <text x="70" y="32" class="label">Fake Login</text>
+    <text x="70" y="52" class="label-mono">/login</text>
+    <text x="70" y="66" class="tag">SSO Portal</text>
+    <!-- Admin -->
+    <rect x="160" y="0" width="140" height="75" class="box" stroke="#33405c" />
+    <text x="230" y="32" class="label">Fake Admin</text>
+    <text x="230" y="52" class="label-mono">/admin/*</text>
+    <text x="230" y="66" class="tag">8 Modules</text>
+    <!-- API -->
+    <rect x="320" y="0" width="140" height="75" class="box" stroke="#33405c" />
+    <text x="390" y="32" class="label">Fake API</text>
+    <text x="390" y="52" class="label-mono">/api/v1/*</text>
+    <text x="390" y="66" class="tag">JSON Decoy</text>
+    <!-- Files -->
+    <rect x="480" y="0" width="140" height="75" class="box" stroke="#33405c" />
+    <text x="550" y="32" class="label">File Manager</text>
+    <text x="550" y="52" class="label-mono">/files/*</text>
+    <text x="550" y="66" class="tag">Virtual FS</text>
+    <!-- Database -->
+    <rect x="640" y="0" width="140" height="75" class="box" stroke="#33405c" />
+    <text x="710" y="32" class="label">DB Viewer</text>
+    <text x="710" y="52" class="label-mono">/database</text>
+    <text x="710" y="66" class="tag">Safe List Filter</text>
+    <!-- Shell -->
+    <rect x="800" y="0" width="140" height="75" class="box" stroke="#33405c" />
+    <text x="870" y="32" class="label">Controlled Shell</text>
+    <text x="870" y="52" class="label-mono">/shell</text>
+    <text x="870" y="66" class="tag">Pure Simulator</text>
+  </g>
+
+  <!-- Connect to EventBus -->
+  <line x1="550" y1="270" x2="550" y2="310" class="arrow" />
+
+  <!-- SECURE EVENTBUS -->
+  <rect x="250" y="310" width="600" height="60" class="bus" />
+  <text x="550" y="336" fill="#e6ebf5" font-family="-apple-system, sans-serif" font-size="14" font-weight="700" text-anchor="middle">SECURE IN-PROCESS EVENTBUS</text>
+  <text x="550" y="354" fill="#38bdf8" font-family="monospace" font-size="11" text-anchor="middle">HMAC-SHA256 Signed Envelope • Bounded Queue • Backpressure Telemetry</text>
+
+  <line x1="550" y1="370" x2="550" y2="410" class="arrow" />
+
+  <!-- LAYER 2 -->
+  <rect x="50" y="410" width="1000" height="190" class="box" />
+  <rect x="65" y="422" width="280" height="24" fill="rgba(63, 182, 139, 0.15)" rx="4" />
+  <text x="75" y="438" fill="#3fb68b" font-family="-apple-system, sans-serif" font-size="11" font-weight="700">LAYER 2 • TRUSTED PROCESSING ENGINE</text>
+  <text x="360" y="438" fill="#67738f" font-family="monospace" font-size="11">PIPELINE • CORRELATION • DETECTION • RISK SCORING • PERSISTENCE</text>
+
+  <!-- Processing Stages -->
+  <g transform="translate(70, 460)">
+    <rect x="0" y="0" width="170" height="110" class="box" stroke="#33405c" />
+    <text x="85" y="28" class="label">1. Session Engine</text>
+    <text x="85" y="48" class="tag">Cookie / Fingerprint</text>
+    <text x="85" y="68" class="tag">Profile Tracking</text>
+    <text x="85" y="88" class="tag">Endpoints &amp; Surfaces</text>
+
+    <rect x="195" y="0" width="170" height="110" class="box" stroke="#33405c" />
+    <text x="280" y="28" class="label">2. Intelligence</text>
+    <text x="280" y="48" class="tag">GeoIP (Mock / MMDB)</text>
+    <text x="280" y="68" class="tag">ASN &amp; ISP Resolution</text>
+    <text x="280" y="88" class="tag">VPN &amp; Tor Heuristics</text>
+
+    <rect x="390" y="0" width="180" height="110" class="box" stroke="#33405c" />
+    <text x="480" y="28" class="label">3. Detection Engine</text>
+    <text x="480" y="48" class="tag">10 Attack Rule Classes</text>
+    <text x="480" y="68" class="tag">Rolling Time Windows</text>
+    <text x="480" y="88" class="tag">MITRE ATT&amp;CK Tagging</text>
+
+    <rect x="590" y="0" width="170" height="110" class="box" stroke="#33405c" />
+    <text x="675" y="28" class="label">4. Scoring Models</text>
+    <text x="675" y="48" class="tag">Risk Formula (0–100)</text>
+    <text x="675" y="68" class="tag">Engagement Depth</text>
+    <text x="675" y="88" class="tag">Threat Pulse Index</text>
+
+    <rect x="780" y="0" width="160" height="110" class="box" stroke="#33405c" />
+    <text x="860" y="28" class="label">5. Persistence &amp; Alert</text>
+    <text x="860" y="48" class="tag">SQLite (PG-Ready)</text>
+    <text x="860" y="68" class="tag">Deduplicated Alerts</text>
+    <text x="860" y="88" class="tag">Post-Commit Broadcast</text>
+  </g>
+
+  <line x1="550" y1="600" x2="550" y2="640" class="arrow" />
+
+  <!-- LAYER 3 -->
+  <rect x="50" y="640" width="1000" height="150" class="box" />
+  <rect x="65" y="652" width="280" height="24" fill="rgba(76, 141, 255, 0.15)" rx="4" />
+  <text x="75" y="668" fill="#4c8dff" font-family="-apple-system, sans-serif" font-size="11" font-weight="700">LAYER 3 • PRIVATE SOC DASHBOARD</text>
+  <text x="360" y="668" fill="#67738f" font-family="monospace" font-size="11">PORT 5000 • ARGON2ID + TOTP MFA • REST API • WEBSOCKET (/soc)</text>
+
+  <!-- Dashboard Components -->
+  <g transform="translate(70, 690)">
+    <rect x="0" y="0" width="145" height="70" class="box" stroke="#33405c" />
+    <text x="72" y="32" class="label">Live Attacks</text>
+    <text x="72" y="52" class="tag">Real-Time Table</text>
+
+    <rect x="160" y="0" width="145" height="70" class="box" stroke="#33405c" />
+    <text x="232" y="32" class="label">Attack Map</text>
+    <text x="232" y="52" class="tag">Leaflet Visualizer</text>
+
+    <rect x="320" y="0" width="145" height="70" class="box" stroke="#33405c" />
+    <text x="392" y="32" class="label">Threat Dossiers</text>
+    <text x="392" y="52" class="tag">Attacker Timeline</text>
+
+    <rect x="480" y="0" width="145" height="70" class="box" stroke="#33405c" />
+    <text x="552" y="32" class="label">Alert Center</text>
+    <text x="552" y="52" class="tag">Incident Triage</text>
+
+    <rect x="640" y="0" width="145" height="70" class="box" stroke="#33405c" />
+    <text x="712" y="32" class="label">Executive Reports</text>
+    <text x="712" y="52" class="tag">CSV &amp; PDF Export</text>
+
+    <rect x="800" y="0" width="140" height="70" class="box" stroke="#33405c" />
+    <text x="870" y="32" class="label">Demo Controls</text>
+    <text x="870" y="52" class="tag">7 Loopback Attacks</text>
+  </g>
+
+</svg>

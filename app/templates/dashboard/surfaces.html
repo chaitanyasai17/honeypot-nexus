@@ -1,0 +1,89 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Honeypot Surfaces — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Honeypot Deception Surfaces</h1>
+    <div class="hn-page-sub">Public synthetic surface monitoring, sensor telemetry, and live lures</div>
+  </div>
+  <div>
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadSurfaces();">⟳ Refresh Telemetry</button>
+  </div>
+</div>
+
+<div class="hn-grid-12" id="surfacesContainer">
+  <!-- Dynamic cards inserted here -->
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  const surfaceLinks = {
+    'login': 'http://127.0.0.1:8080/login',
+    'admin': 'http://127.0.0.1:8080/admin',
+    'api': 'http://127.0.0.1:8080/api',
+    'files': 'http://127.0.0.1:8080/files',
+    'database': 'http://127.0.0.1:8080/database',
+    'shell': 'http://127.0.0.1:8080/shell'
+  };
+
+  const surfaceIcons = {
+    'login': '🔐',
+    'admin': '⚙️',
+    'api': '🔌',
+    'files': '📁',
+    'database': '🗄️',
+    'shell': '💻'
+  };
+
+  window.loadSurfaces = async function() {
+    try {
+      const res = await API.getSurfaces();
+      const container = document.getElementById('surfacesContainer');
+
+      container.innerHTML = res.surfaces.map(s => `
+        <div class="hn-col-4">
+          <div class="hn-panel" style="padding: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:24px;">${surfaceIcons[s.surface] || '🛡️'}</span>
+              <span style="background:rgba(63,182,139,0.14); color:var(--hn-ok); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">
+                ● ${s.status.toUpperCase()}
+              </span>
+            </div>
+
+            <h3 style="font-size:16px; font-weight:700; margin-bottom:4px;">${esc(s.name)}</h3>
+            <p style="font-size:12px; color:var(--hn-text-dim); margin-bottom:16px;">Sensor endpoint on port 8080</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; background:var(--hn-bg-2); padding:10px; border-radius:6px;">
+              <div>
+                <div style="font-size:10px; color:var(--hn-text-faint); text-transform:uppercase;">Interactions</div>
+                <div class="mono" style="font-size:18px; font-weight:800;">${s.events}</div>
+              </div>
+              <div>
+                <div style="font-size:10px; color:var(--hn-text-faint); text-transform:uppercase;">Attacks Detected</div>
+                <div class="mono" style="font-size:18px; font-weight:800; color:var(--hn-critical);">${s.attacks}</div>
+              </div>
+            </div>
+
+            <div style="font-size:11px; color:var(--hn-text-faint); margin-bottom:14px;">
+              Last Activity: <strong>${formatDateTime(s.last_activity)}</strong>
+            </div>
+
+            <a href="${surfaceLinks[s.surface] || '#'}" target="_blank" class="hn-btn hn-btn-secondary hn-btn-sm" style="width:100%;">
+              Open Sensor Interface &rarr;
+            </a>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  loadSurfaces();
+</script>
+{% endblock %}

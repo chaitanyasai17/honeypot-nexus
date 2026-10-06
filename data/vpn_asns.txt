@@ -1,0 +1,5 @@
+# Synthetic VPN / Hosting Provider ASNs for Honeypot Nexus Lab Demo
+AS64497
+AS64501
+AS64507
+AS64509

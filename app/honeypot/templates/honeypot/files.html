@@ -1,0 +1,78 @@
+{% extends "honeypot/base.html" %}
+
+{% block title %}File Repository — {{ company }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 24px;">
+  <!-- Folder navigation -->
+  <div style="width: 200px; flex-shrink: 0;">
+    <div class="card" style="padding: 12px;">
+      <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding-left: 8px;">
+        Virtual Folders
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        {% for f in folders %}
+        {% set f_path = '/' + f %}
+        <a href="/files?path={{ f_path }}" style="padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{ 'var(--primary)' if current_folder == f_path else '#334155' }}; background: {{ '#eff6ff' if current_folder == f_path else 'transparent' }};">
+          📁 /{{ f }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- File Table -->
+  <div style="flex-grow: 1;">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 18px; font-weight: 700;">Current Directory: <code>{{ current_folder }}</code></h2>
+        <span style="font-size: 13px; color: var(--text-muted);">{{ files|length }} items</span>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+            <th style="padding: 10px 8px;">Name</th>
+            <th>Size</th>
+            <th>Modified</th>
+            <th>Owner</th>
+            <th style="text-align: right; padding-right: 8px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if files %}
+            {% for item in files %}
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 10px 8px; font-weight: 500;">
+                📄 {{ item.name }}
+                {% if item.sensitive %}
+                <span style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-left: 6px;">CONFIDENTIAL</span>
+                {% endif %}
+              </td>
+              <td style="color: var(--text-muted);">{{ item.size }}</td>
+              <td style="color: var(--text-muted);">{{ item.modified }}</td>
+              <td style="color: var(--text-muted);">{{ item.owner }}</td>
+              <td style="text-align: right; padding-right: 8px;">
+                <a href="/files/view?path={{ item.path }}" style="color: var(--primary); text-decoration: none; margin-right: 12px; font-weight: 600;">View</a>
+                <a href="/files/download?path={{ item.path }}" style="color: var(--primary); text-decoration: none; font-weight: 600;">Download</a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">Directory is currently empty.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+
+      <!-- Fake Upload Form -->
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 1px dashed var(--border);">
+        <h4 style="font-size: 14px; margin-bottom: 12px;">Upload File to Current Directory</h4>
+        <form method="POST" action="/files/upload" enctype="multipart/form-data" style="display: flex; gap: 12px; align-items: center;">
+          <input type="file" name="file" class="form-control" style="max-width: 300px;">
+          <button type="submit" class="btn">Upload</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

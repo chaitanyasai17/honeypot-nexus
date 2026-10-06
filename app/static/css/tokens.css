@@ -1,0 +1,88 @@
+:root {
+  /* Surfaces */
+  --hn-bg-0: #0a0e17;   /* App background */
+  --hn-bg-1: #0f1523;   /* Panels */
+  --hn-bg-2: #151c2e;   /* Raised, hover, table header */
+  --hn-bg-3: #1c2539;   /* Inputs, active rows */
+  --hn-border: #232c42;
+  --hn-border-strong: #33405c;
+
+  /* Typography Colors */
+  --hn-text: #e6ebf5;
+  --hn-text-dim: #9aa6bf;
+  --hn-text-faint: #67738f;
+
+  /* Restrained Accents */
+  --hn-accent: #4c8dff;
+  --hn-accent-weak: rgba(76, 141, 255, 0.14);
+  --hn-cyan: #35c2d6;
+
+  /* Semantic Severity Tokens */
+  --hn-sev-normal: #3fb68b;
+  --hn-sev-normal-bg: rgba(63, 182, 139, 0.14);
+
+  --hn-sev-elevated: #e6b422;
+  --hn-sev-elevated-bg: rgba(230, 180, 34, 0.14);
+
+  --hn-sev-high: #f08a24;
+  --hn-sev-high-bg: rgba(240, 138, 36, 0.16);
+
+  --hn-sev-critical: #ef4655;
+  --hn-sev-critical-bg: rgba(239, 70, 85, 0.18);
+
+  /* Operational Status */
+  --hn-ok: #3fb68b;
+  --hn-warn: #e6b422;
+  --hn-down: #ef4655;
+  --hn-info: #4c8dff;
+
+  /* Attack Category Palette */
+  --hn-cat-1: #4c8dff;
+  --hn-cat-2: #35c2d6;
+  --hn-cat-3: #a78bfa;
+  --hn-cat-4: #f472b6;
+  --hn-cat-5: #e6b422;
+  --hn-cat-6: #f08a24;
+  --hn-cat-7: #3fb68b;
+  --hn-cat-8: #94a3b8;
+
+  /* Typography Scales */
+  --hn-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hn-mono: "JetBrains Mono", Consolas, "SF Mono", monospace;
+
+  --hn-fs-xs: 12px;
+  --hn-fs-sm: 13px;
+  --hn-fs-md: 14px;
+  --hn-fs-lg: 16px;
+  --hn-fs-xl: 20px;
+  --hn-fs-2xl: 24px;
+  --hn-fs-kpi: 32px;
+
+  /* Spacing Scale (4px base) */
+  --hn-s1: 4px;
+  --hn-s2: 8px;
+  --hn-s3: 12px;
+  --hn-s4: 16px;
+  --hn-s5: 24px;
+  --hn-s6: 32px;
+  --hn-s7: 48px;
+
+  /* Radii & Shadows */
+  --hn-r-sm: 6px;
+  --hn-r-md: 10px;
+  --hn-r-lg: 14px;
+  --hn-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  /* Motion */
+  --hn-dur-fast: 120ms;
+  --hn-dur: 200ms;
+  --hn-dur-slow: 600ms;
+  --hn-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

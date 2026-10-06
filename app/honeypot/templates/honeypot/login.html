@@ -1,0 +1,52 @@
+{% extends "honeypot/base.html" %}
+
+{% block title %}Sign In — {{ company }} Employee Portal{% endblock %}
+
+{% block content %}
+<div style="max-width: 420px; margin: 40px auto;">
+  <div class="card">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h2 style="font-size: 20px; font-weight: 700; color: #1e293b;">Employee Sign In</h2>
+      <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">SecureCorp Corporate Single Sign-On (SSO)</p>
+    </div>
+
+    {% if error %}
+    <div class="alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <label for="username">Corporate Username or Email</label>
+        <input type="text" id="username" name="username" class="form-control" placeholder="e.g. jsmith or admin" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••••••" required>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px;">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-muted);">
+          <input type="checkbox" name="remember"> Remember this station
+        </label>
+        <a href="#forgot" onclick="alert('Password reset link requested. If valid, an email will be sent.'); return false;" style="color: var(--primary); text-decoration: none;">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn" style="width: 100%; padding: 10px;">Sign In to Portal</button>
+    </form>
+
+    {% if config.get('DEMO_MODE') %}
+    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed var(--border); font-size: 12px; color: var(--text-muted);">
+      <details>
+        <summary style="cursor: pointer; font-weight: 600; color: #b45309;">💡 Demo Evaluation Credentials</summary>
+        <div style="margin-top: 8px; background: #fffbeb; padding: 8px 12px; border-radius: 4px; font-family: monospace;">
+          admin / admin123<br>
+          jsmith / Summer2024!<br>
+          developer / devpass2024
+        </div>
+      </details>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

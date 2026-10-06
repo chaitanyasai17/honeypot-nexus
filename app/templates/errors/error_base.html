@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ code or 'Error' }} — Honeypot Nexus</title>
+  <style>
+    body { background: #0a0e17; color: #e6ebf5; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
+    .box { background: #0f1523; border: 1px solid #232c42; border-radius: 12px; padding: 40px; max-width: 480px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+    h1 { font-size: 56px; margin: 0 0 12px; color: #ef4655; font-weight: 800; font-family: monospace; }
+    h2 { font-size: 20px; margin: 0 0 12px; }
+    p { color: #9aa6bf; font-size: 14px; margin-bottom: 24px; }
+    a { display: inline-block; background: #4c8dff; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>{{ code }}</h1>
+    <h2>{{ title }}</h2>
+    <p>{{ message }}</p>
+    {% if request_id %}<p style="font-family: monospace; font-size: 11px; color: #67738f;">Trace ID: {{ request_id }}</p>{% endif %}
+    <a href="/dashboard/">Return to SOC Overview</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,155 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Alert Center — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Security Alert Incident Center</h1>
+    <div class="hn-page-sub">Triage and response console for High and Critical honeypot intrusion triggers</div>
+  </div>
+  <div>
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadAlerts();">⟳ Refresh Alerts</button>
+  </div>
+</div>
+
+<!-- Tabs & Status Filter -->
+<div class="hn-panel" style="padding: 12px 16px; margin-bottom: 16px;">
+  <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between;">
+    <div style="display: flex; gap: 8px;">
+      <button class="hn-btn hn-btn-secondary hn-btn-sm active" id="tabAll" onclick="setTab('');">All (<span id="cntAll">0</span>)</button>
+      <button class="hn-btn hn-btn-secondary hn-btn-sm" id="tabNew" onclick="setTab('NEW');">New (<span id="cntNew">0</span>)</button>
+      <button class="hn-btn hn-btn-secondary hn-btn-sm" id="tabAck" onclick="setTab('ACKNOWLEDGED');">Acknowledged (<span id="cntAck">0</span>)</button>
+      <button class="hn-btn hn-btn-secondary hn-btn-sm" id="tabRes" onclick="setTab('RESOLVED');">Resolved (<span id="cntRes">0</span>)</button>
+    </div>
+
+    <div>
+      <select id="filterSev" class="hn-select" onchange="loadAlerts();">
+        <option value="">All Severities</option>
+        <option value="CRITICAL">Critical</option>
+        <option value="HIGH">High</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Alerts Table -->
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Time (UTC)</th>
+          <th>Severity</th>
+          <th>Alert Title</th>
+          <th>Source IP</th>
+          <th>Category</th>
+          <th>Risk</th>
+          <th>Occurrences</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="alertsTableBody">
+        <tr><td colspan="9" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading alerts...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc, showToast } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  let currentTab = '';
+
+  window.setTab = function(tab) {
+    currentTab = tab;
+    ['tabAll', 'tabNew', 'tabAck', 'tabRes'].forEach(t => {
+      document.getElementById(t).classList.remove('hn-btn-primary');
+      document.getElementById(t).classList.add('hn-btn-secondary');
+    });
+
+    const activeBtn = tab === '' ? 'tabAll' : tab === 'NEW' ? 'tabNew' : tab === 'ACKNOWLEDGED' ? 'tabAck' : 'tabRes';
+    document.getElementById(activeBtn).classList.remove('hn-btn-secondary');
+    document.getElementById(activeBtn).classList.add('hn-btn-primary');
+
+    loadAlerts();
+  };
+
+  window.loadAlerts = async function() {
+    const params = {};
+    if (currentTab) params.status = currentTab;
+    const sev = document.getElementById('filterSev').value;
+    if (sev) params.severity = sev;
+
+    try {
+      const res = await API.getAlerts(params);
+
+      // Counts
+      document.getElementById('cntAll').textContent = res.counts.ALL || 0;
+      document.getElementById('cntNew').textContent = res.counts.NEW || 0;
+      document.getElementById('cntAck').textContent = res.counts.ACKNOWLEDGED || 0;
+      document.getElementById('cntRes').textContent = res.counts.RESOLVED || 0;
+
+      const badgeNav = document.getElementById('hnNavAlertBadge');
+      if (badgeNav && res.counts.NEW > 0) {
+        badgeNav.style.display = 'inline-block';
+        badgeNav.textContent = res.counts.NEW;
+      }
+
+      const tbody = document.getElementById('alertsTableBody');
+      if (!res.data.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--hn-text-faint); padding:32px;">No alerts in this view.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(a => `
+        <tr>
+          <td class="mono">${formatDateTime(a.timestamp)}</td>
+          <td>${formatSeverityBadge(a.severity)}</td>
+          <td style="font-weight:600;">${esc(a.title)}</td>
+          <td class="mono">${esc(a.source_ip)}</td>
+          <td><span class="hn-chip hn-chip-new">${esc(a.attack_type)}</span></td>
+          <td>${formatRiskMeter(a.risk_score)}</td>
+          <td class="mono">${a.occurrences}x</td>
+          <td><span class="hn-chip ${a.status === 'NEW' ? 'hn-chip-new' : a.status === 'ACKNOWLEDGED' ? 'hn-chip-ack' : 'hn-chip-resolved'}">${a.status}</span></td>
+          <td style="text-align: right;">
+            ${a.status === 'NEW' ? `
+              <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="ack('${a.alert_id}')">Acknowledge</button>
+            ` : ''}
+            ${a.status !== 'RESOLVED' ? `
+              <button class="hn-btn hn-btn-primary hn-btn-sm" onclick="resolve('${a.alert_id}')">Resolve</button>
+            ` : '<span style="color:var(--hn-text-faint); font-size:11px;">Closed</span>'}
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  window.ack = async function(id) {
+    try {
+      await API.ackAlert(id);
+      showToast('Alert Acknowledged', `Alert ${id.slice(0, 8)} marked acknowledged.`, 'normal');
+      loadAlerts();
+    } catch (e) {
+      showToast('Error', e.message, 'critical');
+    }
+  };
+
+  window.resolve = async function(id) {
+    try {
+      await API.resolveAlert(id);
+      showToast('Alert Resolved', `Alert ${id.slice(0, 8)} closed.`, 'normal');
+      loadAlerts();
+    } catch (e) {
+      showToast('Error', e.message, 'critical');
+    }
+  };
+
+  loadAlerts();
+</script>
+{% endblock %}

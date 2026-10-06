@@ -1,0 +1,157 @@
+{% extends "honeypot/base.html" %}
+
+{% block title %}Web Terminal — {{ company }}{% endblock %}
+
+{% block head %}
+<style>
+  .terminal-window {
+    background: #090d16;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    overflow: hidden;
+    font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+  }
+  .terminal-topbar {
+    background: #111827;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #1f2937;
+  }
+  .terminal-dots { display: flex; gap: 6px; margin-right: 16px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .terminal-title { color: #9ca3af; font-size: 12px; font-weight: 500; }
+  .terminal-screen {
+    padding: 16px;
+    height: 480px;
+    overflow-y: auto;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .prompt-text { color: #22c55e; font-weight: 700; margin-right: 8px; }
+  .command-line-wrapper { display: flex; align-items: center; margin-top: 4px; }
+  .terminal-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f8fafc;
+    font-family: inherit;
+    font-size: 13px;
+    flex-grow: 1;
+  }
+  .output-block { white-space: pre-wrap; word-break: break-all; margin: 4px 0 8px; color: #cbd5e1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="terminal-window">
+  <div class="terminal-topbar">
+    <div class="terminal-dots">
+      <span class="dot" style="background: #ef4444;"></span>
+      <span class="dot" style="background: #eab308;"></span>
+      <span class="dot" style="background: #22c55e;"></span>
+    </div>
+    <div class="terminal-title">admin@sc-web-01: ~ (bash / emulated session)</div>
+  </div>
+
+  <div class="terminal-screen" id="termScreen" onclick="document.getElementById('termInput').focus();">
+    <div style="color: #64748b; margin-bottom: 12px;">
+      SecureCorp Admin Web Terminal — Ubuntu 22.04.3 LTS (GNU/Linux 5.15.0-91-generic x86_64)<br>
+      System status: All daemons operational. Type 'help' for available commands.
+    </div>
+    <div id="termHistory"></div>
+    <div class="command-line-wrapper">
+      <span class="prompt-text" id="termPrompt">root@sc-web-01:/home/admin# </span>
+      <input type="text" id="termInput" class="terminal-input" autocomplete="off" spellcheck="false" autofocus>
+    </div>
+  </div>
+</div>
+
+<script>
+  const termScreen = document.getElementById('termScreen');
+  const termInput = document.getElementById('termInput');
+  const termPrompt = document.getElementById('termPrompt');
+  const termHistory = document.getElementById('termHistory');
+
+  let historyList = [];
+  let historyIdx = -1;
+
+  termInput.addEventListener('keydown', async function(e) {
+    if (e.key === 'Enter') {
+      const cmd = this.value;
+      this.value = '';
+      if (!cmd.trim()) return;
+
+      historyList.push(cmd);
+      historyIdx = historyList.length;
+
+      // Handle local clear
+      if (cmd.trim().toLowerCase() === 'clear') {
+        termHistory.innerHTML = '';
+        fetch('/shell/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cmd: cmd })
+        });
+        return;
+      }
+
+      // Add entered command to screen
+      const cmdRow = document.createElement('div');
+      cmdRow.innerHTML = `<span class="prompt-text">${termPrompt.textContent}</span><span>${escapeHtml(cmd)}</span>`;
+      termHistory.appendChild(cmdRow);
+
+      // Call safe server simulator
+      try {
+        const resp = await fetch('/shell/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cmd: cmd })
+        });
+        const data = await resp.json();
+
+        if (data.output) {
+          const outRow = document.createElement('div');
+          outRow.className = 'output-block';
+          outRow.textContent = data.output;
+          termHistory.appendChild(outRow);
+        }
+
+        if (data.prompt) {
+          termPrompt.textContent = data.prompt;
+        }
+      } catch (err) {
+        const errRow = document.createElement('div');
+        errRow.className = 'output-block';
+        errRow.textContent = 'Network communication error with terminal daemon.';
+        termHistory.appendChild(errRow);
+      }
+
+      termScreen.scrollTop = termScreen.scrollHeight;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (historyIdx > 0) {
+        historyIdx--;
+        this.value = historyList[historyIdx];
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIdx < historyList.length - 1) {
+        historyIdx++;
+        this.value = historyList[historyIdx];
+      } else {
+        historyIdx = historyList.length;
+        this.value = '';
+      }
+    }
+  });
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+{% endblock %}

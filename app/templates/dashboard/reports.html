@@ -1,0 +1,110 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Threat Intelligence Reports — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Threat Assessment & Intelligence Reports</h1>
+    <div class="hn-page-sub">Export compliance audit logs, telemetry archives, and branded executive PDF threat summaries</div>
+  </div>
+</div>
+
+<!-- 3 Report Cards -->
+<div class="hn-grid-12" style="margin-bottom: 24px;">
+  <!-- PDF Report -->
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 20px;">
+      <div style="font-size: 28px; margin-bottom: 8px;">📄</div>
+      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Executive Threat Summary (PDF)</h3>
+      <p style="font-size: 13px; color: var(--hn-text-dim); margin-bottom: 20px; line-height: 1.4;">
+        Formal cybersecurity incident report including KPI analysis, attack technique distribution, high/critical alerts, and methodology appendix.
+      </p>
+      <a href="/api/reports/threat-report.pdf" class="hn-btn hn-btn-primary" style="width: 100%;">
+        Generate & Download PDF &darr;
+      </a>
+    </div>
+  </div>
+
+  <!-- CSV Events -->
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 20px;">
+      <div style="font-size: 28px; margin-bottom: 8px;">📊</div>
+      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Telemetry Raw Events (CSV)</h3>
+      <p style="font-size: 13px; color: var(--hn-text-dim); margin-bottom: 20px; line-height: 1.4;">
+        Full structured CSV export of all captured interactions, including timestamps, source IPs, classified attack categories, and risk scores. Formula injection protected.
+      </p>
+      <a href="/api/reports/events.csv" class="hn-btn hn-btn-secondary" style="width: 100%;">
+        Export Events CSV &darr;
+      </a>
+    </div>
+  </div>
+
+  <!-- CSV Attackers -->
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 20px;">
+      <div style="font-size: 28px; margin-bottom: 8px;">🎯</div>
+      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Attacker Dossiers Archive (CSV)</h3>
+      <p style="font-size: 13px; color: var(--hn-text-dim); margin-bottom: 20px; line-height: 1.4;">
+        Export unique threat actor profiles, geographic coordinates, ISP/ASN attributions, session duration metrics, and VPN/Tor suspicion flags.
+      </p>
+      <a href="/api/reports/attackers.csv" class="hn-btn hn-btn-secondary" style="width: 100%;">
+        Export Attackers CSV &darr;
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Report Live Preview Box -->
+<div class="hn-panel">
+  <div class="hn-panel-header">
+    <span class="hn-panel-title">Live Report Executive Summary Preview</span>
+  </div>
+  <div class="hn-panel-body" id="reportPreviewContainer" style="font-size: 13px; color: var(--hn-text); line-height: 1.6;">
+    <p>Generating summary preview...</p>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+
+  async function loadPreview() {
+    try {
+      const summary = await API.getSummary();
+      const previewEl = document.getElementById('reportPreviewContainer');
+
+      previewEl.innerHTML = `
+        <div style="background:var(--hn-bg-2); padding:16px; border-radius:6px; border:1px solid var(--hn-border); margin-bottom:16px;">
+          <h4 style="font-size:14px; color:var(--hn-accent); margin-bottom:6px;">Executive Assessment Snapshot</h4>
+          <p>
+            During the active operational cycle, Honeypot Nexus recorded <strong>${summary.kpis.total_events}</strong> telemetry interactions
+            from <strong>${summary.kpis.active_attackers}</strong> unique threat sources.
+            The prevailing threat index is evaluated at <strong>${summary.threat.level} (${summary.threat.score}/100)</strong>.
+            A total of <strong>${summary.kpis.high_critical_alerts}</strong> actionable security incidents are currently triaged.
+          </p>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <div style="background:var(--hn-bg-1); border:1px solid var(--hn-border); padding:10px; border-radius:4px;">
+            <div style="font-size:11px; color:var(--hn-text-faint);">Reporting Organisation</div>
+            <div style="font-weight:700;">Honeypot Nexus Laboratory</div>
+          </div>
+          <div style="background:var(--hn-bg-1); border:1px solid var(--hn-border); padding:10px; border-radius:4px;">
+            <div style="font-size:11px; color:var(--hn-text-faint);">Attribution Quality</div>
+            <div style="font-weight:700;">Synthetic / Lab Local (RFC 5737)</div>
+          </div>
+          <div style="background:var(--hn-bg-1); border:1px solid var(--hn-border); padding:10px; border-radius:4px;">
+            <div style="font-size:11px; color:var(--hn-text-faint);">Classification</div>
+            <div style="font-weight:700; color:var(--hn-critical);">CONFIDENTIAL</div>
+          </div>
+        </div>
+      `;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  loadPreview();
+</script>
+{% endblock %}

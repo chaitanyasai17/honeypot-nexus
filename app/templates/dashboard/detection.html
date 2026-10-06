@@ -1,0 +1,129 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Detection Engine — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Detection Engine & Rule Catalogue</h1>
+    <div class="hn-page-sub">Modular pattern detection rules, MITRE ATT&CK mappings, and deterministic scoring models</div>
+  </div>
+</div>
+
+<div class="hn-grid-12" style="margin-bottom: 24px;">
+  <!-- Rule Table (8 cols) -->
+  <div class="hn-col-8">
+    <div class="hn-panel hn-panel-flush">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">Active Intrusion Detection Rules</span>
+      </div>
+      <div class="hn-table-container">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th>Rule ID</th>
+              <th>Rule Name</th>
+              <th>Attack Category</th>
+              <th>MITRE</th>
+              <th>Severity</th>
+              <th>Points</th>
+              <th>Triggers</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="rulesTableBody">
+            <tr><td colspan="8" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading detection rules...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scoring Model Reference (4 cols) -->
+  <div class="hn-col-4">
+    <div class="hn-panel" style="padding: 16px;">
+      <div class="hn-panel-title" style="margin-bottom: 12px;">Deterministic Risk Model (0–100)</div>
+      <p style="font-size: 12px; color: var(--hn-text-dim); margin-bottom: 16px; line-height: 1.4;">
+        Session risk scores are strictly deterministic and explainable. Points accrue once per distinct attack technique observed:
+      </p>
+
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--hn-border); color: var(--hn-text-faint); text-align: left;">
+            <th style="padding: 4px 0;">Component</th>
+            <th style="text-align: right; padding: 4px 0;">Weight</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--hn-border);"><td>Base Interaction</td><td class="mono" style="text-align: right;">+5</td></tr>
+          {% for atype, pts in risk_weights.items() %}
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="padding: 4px 0;">{{ atype.replace('_', ' ').title() }}</td>
+            <td class="mono" style="text-align: right; font-weight: 700; color: var(--hn-accent);">+{{ pts }}</td>
+          </tr>
+          {% endfor %}
+          <tr style="border-bottom: 1px solid var(--hn-border);"><td>Repeat Attack Bonus (&ge;3)</td><td class="mono" style="text-align: right; color: var(--hn-sev-elevated);">+10</td></tr>
+          <tr><td>High Engagement Bonus (&ge;60)</td><td class="mono" style="text-align: right; color: var(--hn-sev-elevated);">+10</td></tr>
+        </tbody>
+      </table>
+
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase; margin-bottom: 6px;">Severity Threshold Bands</div>
+      <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+        {% for low, high, band in severity_bands %}
+        <div style="display: flex; justify-content: space-between; padding: 4px 8px; border-radius: 4px; background: var(--hn-bg-2);">
+          <span>{{ band }}</span>
+          <span class="mono">{{ low }} – {{ high }} pts</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc, showToast } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatSeverityBadge } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  window.loadRules = async function() {
+    try {
+      const res = await API.getRules();
+      const tbody = document.getElementById('rulesTableBody');
+      const isAdmin = {{ 'true' if g.current_user and g.current_user.role == 'admin' else 'false' }};
+
+      tbody.innerHTML = res.rules.map(r => `
+        <tr>
+          <td class="mono" style="font-weight:700; color:var(--hn-accent);">${esc(r.rule_id)}</td>
+          <td><strong>${esc(r.name)}</strong><br><small style="color:var(--hn-text-faint);">${esc(r.description)}</small></td>
+          <td><span class="hn-chip hn-chip-new">${esc(r.attack_type)}</span></td>
+          <td class="mono" style="font-size:11px;">${(r.mitre || []).join(', ')}</td>
+          <td>${formatSeverityBadge(r.severity)}</td>
+          <td class="mono" style="font-weight:700;">+${r.points}</td>
+          <td class="mono">${r.triggered_count}</td>
+          <td>
+            ${isAdmin ? `
+              <input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleRuleState('${r.rule_id}', this.checked)">
+            ` : `
+              <span style="font-size:11px; color:${r.enabled ? 'var(--hn-sev-normal)' : 'var(--hn-text-faint)'};">${r.enabled ? 'ACTIVE' : 'DISABLED'}</span>
+            `}
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  window.toggleRuleState = async function(ruleId, enabled) {
+    try {
+      await API.toggleRule(ruleId, enabled);
+      showToast('Rule Updated', `Rule ${ruleId} is now ${enabled ? 'active' : 'disabled'}.`, 'normal');
+    } catch (err) {
+      showToast('Error', err.message, 'critical');
+      loadRules();
+    }
+  };
+
+  loadRules();
+</script>
+{% endblock %}

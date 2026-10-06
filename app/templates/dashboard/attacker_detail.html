@@ -1,0 +1,130 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Dossier: {{ profile.source_ip }} — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <div style="font-size: 12px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Attacker Profile Dossier</div>
+    <h1 class="hn-page-title mono" style="color: var(--hn-accent);">{{ profile.source_ip }}</h1>
+    <div class="hn-page-sub">
+      {{ profile.geo_record.city if profile.geo_record else 'Unknown' }},
+      {{ profile.geo_record.country if profile.geo_record else 'Unknown' }} •
+      ASN: {{ profile.geo_record.asn if profile.geo_record else 'None' }} ({{ profile.geo_record.isp if profile.geo_record else 'Unknown' }})
+    </div>
+  </div>
+  <div>
+    <a href="/dashboard/attackers" class="hn-btn hn-btn-secondary hn-btn-sm">&larr; Back to Profiles</a>
+  </div>
+</div>
+
+<!-- Profile Stats Grid -->
+<div class="hn-grid-12" style="margin-bottom: 24px;">
+  <div class="hn-col-3">
+    <div class="hn-panel" style="padding: 16px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Peak Risk Score</div>
+      <div style="font-size: 28px; font-weight: 800; color: {{ 'var(--hn-critical)' if profile.max_risk >= 75 else 'var(--hn-sev-high)' if profile.max_risk >= 50 else 'var(--hn-sev-normal)' }}; margin-top: 4px;">
+        {{ profile.max_risk }} / 100
+      </div>
+      <div style="font-size: 11px; color: var(--hn-text-dim); margin-top: 4px;">Average Risk: {{ profile.avg_risk }}</div>
+    </div>
+  </div>
+
+  <div class="hn-col-3">
+    <div class="hn-panel" style="padding: 16px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Engagement Depth</div>
+      <div style="font-size: 28px; font-weight: 800; color: var(--hn-cyan); margin-top: 4px;">
+        {{ profile.engagement_score }} / 100
+      </div>
+      <div style="font-size: 11px; color: var(--hn-text-dim); margin-top: 4px;">Surfaces Explored Depth</div>
+    </div>
+  </div>
+
+  <div class="hn-col-3">
+    <div class="hn-panel" style="padding: 16px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Total Telemetry Volume</div>
+      <div style="font-size: 28px; font-weight: 800; color: var(--hn-text); margin-top: 4px;">
+        {{ profile.total_events }}
+      </div>
+      <div style="font-size: 11px; color: var(--hn-text-dim); margin-top: 4px;">Across {{ profile.total_sessions }} sessions</div>
+    </div>
+  </div>
+
+  <div class="hn-col-3">
+    <div class="hn-panel" style="padding: 16px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Network Indicators</div>
+      <div style="margin-top: 8px; display: flex; gap: 8px;">
+        {% if profile.vpn_detected %}
+        <span style="background: rgba(230, 180, 34, 0.2); color: var(--hn-sev-elevated); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">VPN SUSPECTED</span>
+        {% endif %}
+        {% if profile.tor_detected %}
+        <span style="background: rgba(239, 70, 85, 0.2); color: var(--hn-critical); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">TOR EXIT NODE</span>
+        {% endif %}
+        {% if not profile.vpn_detected and not profile.tor_detected %}
+        <span style="background: rgba(63, 182, 139, 0.2); color: var(--hn-sev-normal); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">STANDARD IP</span>
+        {% endif %}
+      </div>
+      <div style="font-size: 11px; color: var(--hn-text-dim); margin-top: 8px;">Primary: {{ profile.top_attack_type }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Correlated Activity Timeline -->
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-panel-header">
+    <span class="hn-panel-title">Attacker Activity Timeline (Recent Events)</span>
+  </div>
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Endpoint</th>
+          <th>Surface</th>
+          <th>Technique</th>
+          <th>Severity</th>
+          <th>Risk</th>
+        </tr>
+      </thead>
+      <tbody id="attackerEventsBody">
+        <tr><td colspan="6" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading events...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  const ip = "{{ profile.source_ip }}";
+
+  async function loadDetail() {
+    try {
+      const data = await API.getAttackerDetail(ip);
+      const tbody = document.getElementById('attackerEventsBody');
+
+      if (!data.recent_events.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--hn-text-faint); padding:24px;">No events recorded.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.recent_events.map(ev => `
+        <tr onclick="window.location.href='/dashboard/live?source_ip=${encodeURIComponent(ip)}'">
+          <td class="mono">${formatDateTime(ev.timestamp)}</td>
+          <td class="mono"><strong>${esc(ev.endpoint)}</strong></td>
+          <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${esc(ev.surface)}</span></td>
+          <td><span class="hn-chip hn-chip-new">${esc(ev.attack_type)}</span></td>
+          <td>${formatSeverityBadge(ev.severity)}</td>
+          <td>${formatRiskMeter(ev.risk_score)}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  loadDetail();
+</script>
+{% endblock %}

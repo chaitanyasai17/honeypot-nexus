@@ -1,0 +1,81 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Attacker Sessions — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Correlated Attacker Sessions</h1>
+    <div class="hn-page-sub">Multi-stage visitor session tracks, duration analysis, and engagement depth</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadSessions();">⟳ Refresh Sessions</button>
+  </div>
+</div>
+
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Session ID</th>
+          <th>Source IP</th>
+          <th>Status</th>
+          <th>Duration</th>
+          <th>Events</th>
+          <th>Surfaces</th>
+          <th>Risk Score</th>
+          <th>Engagement</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="sessionsTableBody">
+        <tr><td colspan="9" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading session records...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  function formatDuration(sec) {
+    if (sec < 60) return `${sec}s`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}m ${s}s`;
+  }
+
+  window.loadSessions = async function() {
+    try {
+      const res = await API.getSessions();
+      const tbody = document.getElementById('sessionsTableBody');
+
+      if (!res.data.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--hn-text-faint); padding:32px;">No attacker sessions recorded.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(s => `
+        <tr onclick="window.location.href='/dashboard/sessions/${encodeURIComponent(s.id)}'">
+          <td class="mono" style="font-weight:700; color:var(--hn-accent);">${esc(s.id.slice(0, 16))}...</td>
+          <td class="mono">${esc(s.source_ip)}</td>
+          <td><span class="hn-chip ${s.status === 'active' ? 'hn-chip-new' : 'hn-chip-ack'}">${s.status.toUpperCase()}</span></td>
+          <td class="mono">${formatDuration(s.duration_seconds)}</td>
+          <td class="mono">${s.event_count}</td>
+          <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${(s.surfaces || []).join(', ')}</span></td>
+          <td>${formatRiskMeter(s.risk_score)}</td>
+          <td class="mono">${s.engagement_score}/100</td>
+          <td class="mono">${formatDateTime(s.last_seen)}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  loadSessions();
+</script>
+{% endblock %}

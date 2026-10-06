@@ -1,0 +1,136 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Live Attacks — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Live Attack Telemetry Stream</h1>
+    <div class="hn-page-sub">Real-time incoming security events, attack classifications, and request payloads</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="fetchLiveEvents();">⟳ Refresh Stream</button>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="hn-panel" style="padding: 12px 16px; margin-bottom: 16px;">
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <input type="text" id="filterIp" placeholder="Filter by IP..." class="hn-input" style="width: 160px;" oninput="fetchLiveEvents();">
+
+    <select id="filterSeverity" class="hn-select" onchange="fetchLiveEvents();">
+      <option value="">All Severities</option>
+      <option value="CRITICAL">Critical</option>
+      <option value="HIGH">High</option>
+      <option value="ELEVATED">Elevated</option>
+      <option value="NORMAL">Normal</option>
+    </select>
+
+    <select id="filterSurface" class="hn-select" onchange="fetchLiveEvents();">
+      <option value="">All Surfaces</option>
+      <option value="login">Login</option>
+      <option value="admin">Admin</option>
+      <option value="api">API</option>
+      <option value="files">Files</option>
+      <option value="database">Database</option>
+      <option value="shell">Shell</option>
+    </select>
+
+    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--hn-text-dim); margin-left: auto;">
+      <input type="checkbox" id="pauseStreamToggle"> Pause Live Ingestion
+    </label>
+  </div>
+</div>
+
+<!-- Live Events Table -->
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Time (UTC)</th>
+          <th>Source IP</th>
+          <th>Location</th>
+          <th>Attack Type</th>
+          <th>Surface</th>
+          <th>Method / Target</th>
+          <th>Severity</th>
+          <th>Risk</th>
+        </tr>
+      </thead>
+      <tbody id="liveEventsTbody">
+        <tr><td colspan="8" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading live telemetry records...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { SocketBus } from "{{ url_for('static', filename='js/core/socket.js') }}";
+  import { formatDateTime, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+
+  window.fetchLiveEvents = async function() {
+    const params = { per_page: 50 };
+    const ip = document.getElementById('filterIp').value.trim();
+    const sev = document.getElementById('filterSeverity').value;
+    const surf = document.getElementById('filterSurface').value;
+
+    if (ip) params.source_ip = ip;
+    if (sev) params.severity = sev;
+    if (surf) params.surface = surf;
+
+    try {
+      const res = await API.getEvents(params);
+      const tbody = document.getElementById('liveEventsTbody');
+      if (!res.data.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--hn-text-faint); padding:32px;">No events matching filters.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(ev => `
+        <tr onclick="openEventDetail('${ev.event_id}')">
+          <td class="mono">${formatDateTime(ev.timestamp)}</td>
+          <td class="mono" style="font-weight:600; color:var(--hn-accent);">${esc(ev.source_ip)}</td>
+          <td>${esc(ev.geo_city || 'Unknown')}, ${esc(ev.geo_country || 'Unknown')}</td>
+          <td><span class="hn-chip hn-chip-new">${esc(ev.attack_type)}</span></td>
+          <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${esc(ev.surface)}</span></td>
+          <td class="mono"><strong style="color:var(--hn-text);">${esc(ev.http_method)}</strong> ${esc(ev.endpoint)}</td>
+          <td>${formatSeverityBadge(ev.severity)}</td>
+          <td>${formatRiskMeter(ev.risk_score)}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Real-time live row prepending
+  SocketBus.on('new_event', (eventDto) => {
+    if (document.getElementById('pauseStreamToggle').checked) return;
+
+    const tbody = document.getElementById('liveEventsTbody');
+    if (!tbody) return;
+
+    const row = document.createElement('tr');
+    row.className = 'hn-row-new';
+    row.onclick = () => openEventDetail(eventDto.event_id);
+    row.innerHTML = `
+      <td class="mono">${formatDateTime(eventDto.timestamp)}</td>
+      <td class="mono" style="font-weight:600; color:var(--hn-accent);">${esc(eventDto.source_ip)}</td>
+      <td>${esc(eventDto.geo_city || 'Unknown')}, ${esc(eventDto.geo_country || 'Unknown')}</td>
+      <td><span class="hn-chip hn-chip-new">${esc(eventDto.attack_type)}</span></td>
+      <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${esc(eventDto.surface)}</span></td>
+      <td class="mono"><strong style="color:var(--hn-text);">${esc(eventDto.http_method)}</strong> ${esc(eventDto.endpoint)}</td>
+      <td>${formatSeverityBadge(eventDto.severity)}</td>
+      <td>${formatRiskMeter(eventDto.risk_score)}</td>
+    `;
+
+    tbody.insertBefore(row, tbody.firstChild);
+    if (tbody.children.length > 100) tbody.removeChild(tbody.lastChild);
+  });
+
+  fetchLiveEvents();
+</script>
+{% endblock %}

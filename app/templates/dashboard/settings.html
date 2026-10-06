@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}System Settings — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">SOC Settings & Configuration</h1>
+    <div class="hn-page-sub">Operator security parameters, deception threshold tuning, and system information</div>
+  </div>
+</div>
+
+<div class="hn-grid-12">
+  <div class="hn-col-6">
+    <div class="hn-panel" style="padding: 20px; margin-bottom: 20px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">🛡️ Operator Security & MFA</h3>
+      <p style="font-size: 13px; color: var(--hn-text-dim); margin-bottom: 16px;">
+        Account: <strong>{{ g.current_user.username }}</strong> • Role: <strong>{{ g.current_user.role.upper() }}</strong><br>
+        Multi-Factor Authentication (TOTP): <span style="color:var(--hn-ok); font-weight:700;">ENABLED</span>
+      </p>
+      <a href="/auth/enroll" class="hn-btn hn-btn-secondary hn-btn-sm">Re-Enroll Authenticator Key</a>
+    </div>
+
+    <div class="hn-panel" style="padding: 20px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">⚡ Demonstration Mode</h3>
+      <p style="font-size: 13px; color: var(--hn-text-dim); margin-bottom: 16px;">
+        Current Status: <strong>{{ 'ACTIVE (Evaluation Mode)' if config.get('DEMO_MODE') else 'DISABLED' }}</strong><br>
+        Allows internal loopback simulation triggers and synthetic RFC 5737 origin mapping.
+      </p>
+      <button class="hn-btn hn-btn-primary hn-btn-sm" onclick="openDemoDrawer();">Open Simulation Console</button>
+    </div>
+  </div>
+
+  <div class="hn-col-6">
+    <div class="hn-panel" style="padding: 20px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">ℹ️ Platform & Engineering Blueprint</h3>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--hn-border); padding-bottom:6px;">
+          <span style="color:var(--hn-text-dim);">Application</span>
+          <strong>Honeypot Nexus v1.0.0</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--hn-border); padding-bottom:6px;">
+          <span style="color:var(--hn-text-dim);">Architecture</span>
+          <strong>3-Layer Isolated Deception Network</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--hn-border); padding-bottom:6px;">
+          <span style="color:var(--hn-text-dim);">Public Honeypot Bind</span>
+          <span class="mono">http://127.0.0.1:8080</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--hn-border); padding-bottom:6px;">
+          <span style="color:var(--hn-text-dim);">Private SOC Dashboard Bind</span>
+          <span class="mono">http://127.0.0.1:5000</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--hn-border); padding-bottom:6px;">
+          <span style="color:var(--hn-text-dim);">GeoIP Provider Mode</span>
+          <span class="mono">{{ config.get('GEOIP_PROVIDER', 'mock').upper() }}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding-top:4px;">
+          <span style="color:var(--hn-text-dim);">Password Hasher</span>
+          <span class="mono">Argon2id (time_cost=3, mem=64MB)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

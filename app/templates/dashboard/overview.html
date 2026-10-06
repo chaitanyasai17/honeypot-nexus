@@ -1,0 +1,512 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}SOC Overview — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Security Operations Center — Overview</h1>
+    <div class="hn-page-sub">Defensive Deception Telemetry & Live Intrusion Intelligence</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadOverview();">⟳ Refresh Telemetry</button>
+  </div>
+</div>
+
+<!-- 1. Row of 6 KPI Cards -->
+<div class="hn-kpi-grid">
+  <div class="hn-kpi-card">
+    <div class="hn-kpi-label">Total Events</div>
+    <div class="hn-kpi-val" id="kpiTotalEvents">0</div>
+    <div class="hn-kpi-sub">Sensor interactions</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div class="hn-kpi-label">Active Attackers</div>
+    <div class="hn-kpi-val" id="kpiActiveAttackers">0</div>
+    <div class="hn-kpi-sub">Distinct IPs (15m window)</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div class="hn-kpi-label">Active Sessions</div>
+    <div class="hn-kpi-val" id="kpiActiveSessions">0</div>
+    <div class="hn-kpi-sub">Correlated engagements</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div class="hn-kpi-label">High / Critical Alerts</div>
+    <div class="hn-kpi-val" id="kpiCriticalAlerts" style="color: var(--hn-critical);">0</div>
+    <div class="hn-kpi-sub">Requires triage</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div class="hn-kpi-label">Average Session Risk</div>
+    <div class="hn-kpi-val" id="kpiAvgRisk">0</div>
+    <div class="hn-kpi-sub">Score out of 100</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div class="hn-kpi-label">Honeypot Uptime</div>
+    <div class="hn-kpi-val" id="kpiUptime">00:00:00</div>
+    <div class="hn-kpi-sub">Sensors online</div>
+  </div>
+</div>
+
+<!-- 2. Row: Live Stream (8 cols) & Threat Pulse + Distribution (4 cols) -->
+<div class="hn-grid-12" style="margin-bottom: 20px;">
+  <!-- Live Attack Stream -->
+  <div class="hn-col-8">
+    <div class="hn-panel hn-panel-flush" style="height: 420px;">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">
+          <span class="hn-dot hn-dot-live"></span>
+          Live Attack Stream
+        </span>
+        <a href="/dashboard/live" style="font-size: 11px; font-weight: 600;">View All &rarr;</a>
+      </div>
+      <div class="hn-table-container hn-panel-body">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Source IP</th>
+              <th>Attack Type</th>
+              <th>Endpoint</th>
+              <th>Severity</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody id="overviewStreamBody">
+            <tr><td colspan="6" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Waiting for incoming honeypot events...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Threat Pulse & Distribution -->
+  <div class="hn-col-4" style="display:flex; flex-direction:column; gap:16px;">
+    <!-- Threat Pulse Card -->
+    <div class="hn-panel" style="padding: 16px;">
+      <div class="hn-panel-title" style="margin-bottom: 12px;">Global Threat Pulse</div>
+      <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+        <span id="overviewThreatLevel" style="font-size: 26px; font-weight: 800; color: var(--hn-sev-normal);">NORMAL</span>
+        <span class="hn-badge hn-badge-normal" id="overviewThreatScore">0/100</span>
+      </div>
+      <div id="overviewThreatReasons" style="font-size: 12px; color: var(--hn-text-dim); line-height: 1.4;">
+        No elevated threats detected.
+      </div>
+    </div>
+
+    <!-- Attack Distribution Doughnut -->
+    <div class="hn-panel" style="flex-grow: 1;">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">Attack Technique Breakdown</span>
+      </div>
+      <div class="hn-panel-body" style="position: relative; height: 180px;">
+        <canvas id="attackDistChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Row: Timeline Chart (7 cols) & Mini Attack Map (5 cols) -->
+<div class="hn-grid-12" style="margin-bottom: 20px;">
+  <div class="hn-col-7">
+    <div class="hn-panel">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">Attack Timeline (60 Minutes)</span>
+      </div>
+      <div class="hn-panel-body" style="position: relative; height: 260px;">
+        <canvas id="attackTimelineChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="hn-col-5">
+    <div class="hn-panel hn-panel-flush">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">Geographic Threat Map</span>
+        <a href="/dashboard/map" style="font-size: 11px; font-weight: 600;">Full Map &rarr;</a>
+      </div>
+      <div class="hn-panel-body" style="height: 260px; padding: 0;">
+        <div id="overviewMap" style="height: 100%; width: 100%; background: #0f1523;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Row: Top Attackers (6 cols) & Recent Alerts (6 cols) -->
+<div class="hn-grid-12">
+  <div class="hn-col-6">
+    <div class="hn-panel hn-panel-flush">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">Top Threat Actors</span>
+        <a href="/dashboard/attackers" style="font-size: 11px; font-weight: 600;">All Profiles &rarr;</a>
+      </div>
+      <div class="hn-table-container hn-panel-body">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th>IP</th>
+              <th>Location</th>
+              <th>Top Attack</th>
+              <th>Risk</th>
+              <th>Events</th>
+            </tr>
+          </thead>
+          <tbody id="topAttackersBody">
+            <tr><td colspan="5" style="text-align: center; color: var(--hn-text-faint); padding: 24px;">No profile records available.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="hn-col-6">
+    <div class="hn-panel hn-panel-flush">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">Recent Security Alerts</span>
+        <a href="/dashboard/alerts" style="font-size: 11px; font-weight: 600;">Alert Center &rarr;</a>
+      </div>
+      <div class="hn-table-container hn-panel-body">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Severity</th>
+              <th>Title</th>
+              <th>Source IP</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recentAlertsBody">
+            <tr><td colspan="5" style="text-align: center; color: var(--hn-text-faint); padding: 24px;">No active alerts.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { SocketBus } from "{{ url_for('static', filename='js/core/socket.js') }}";
+  import { formatDate, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+  import { esc, openDrawer } from "{{ url_for('static', filename='js/core/ui.js') }}";
+
+  let distChart = null;
+  let timelineChart = null;
+  let leafletMap = null;
+  let mapMarkers = [];
+
+  function formatDuration(sec) {
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  window.loadOverview = async function() {
+    try {
+      const summary = await API.getSummary();
+
+      // 1. KPIs
+      document.getElementById('kpiTotalEvents').textContent = summary.kpis.total_events.toLocaleString();
+      document.getElementById('kpiActiveAttackers').textContent = summary.kpis.active_attackers;
+      document.getElementById('kpiActiveSessions').textContent = summary.kpis.active_sessions;
+      document.getElementById('kpiCriticalAlerts').textContent = summary.kpis.high_critical_alerts;
+      document.getElementById('kpiAvgRisk').textContent = summary.kpis.avg_risk;
+      document.getElementById('kpiUptime').textContent = formatDuration(summary.kpis.uptime_seconds);
+
+      // 2. Threat Pulse
+      const lvlEl = document.getElementById('overviewThreatLevel');
+      const scEl = document.getElementById('overviewThreatScore');
+      const reasEl = document.getElementById('overviewThreatReasons');
+
+      lvlEl.textContent = summary.threat.level;
+      lvlEl.style.color = summary.threat.level === 'CRITICAL' ? 'var(--hn-sev-critical)' :
+                          summary.threat.level === 'HIGH' ? 'var(--hn-sev-high)' :
+                          summary.threat.level === 'ELEVATED' ? 'var(--hn-sev-elevated)' : 'var(--hn-sev-normal)';
+
+      scEl.textContent = `${summary.threat.score}/100`;
+      scEl.className = `hn-badge hn-badge-${summary.threat.level.toLowerCase()}`;
+      reasEl.innerHTML = summary.threat.reasons.map(r => `<div>• ${esc(r)}</div>`).join('');
+
+      // 3. Attack Distribution Doughnut Chart
+      renderDistChart(summary.distribution);
+
+      // 4. Timeline Chart
+      renderTimelineChart(summary.timeline);
+
+      // 5. Mini Map
+      renderMiniMap();
+
+      // 6. Top Attackers Table
+      renderTopAttackers(summary.top_attackers);
+
+      // 7. Load Recent Alerts & Events
+      loadRecentAlerts();
+      loadRecentEvents();
+
+    } catch (err) {
+      console.error('Failed to load overview:', err);
+    }
+  };
+
+  function renderDistChart(dist) {
+    const ctx = document.getElementById('attackDistChart');
+    if (!ctx) return;
+
+    const labels = Object.keys(dist);
+    const data = Object.values(dist);
+
+    if (distChart) distChart.destroy();
+
+    distChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.map(l => l.replace(/_/g, ' ')),
+        datasets: [{
+          data: data.length ? data : [1],
+          backgroundColor: data.length ? [
+            '#ef4655', '#f08a24', '#e6b422', '#4c8dff', '#35c2d6', '#a78bfa', '#f472b6', '#3fb68b'
+          ] : ['#1f2937'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#9aa6bf', font: { size: 10 } } }
+        },
+        cutout: '68%'
+      }
+    });
+  }
+
+  function renderTimelineChart(timeline) {
+    const ctx = document.getElementById('attackTimelineChart');
+    if (!ctx) return;
+
+    const labels = timeline.map(b => b.t);
+    const criticalData = timeline.map(b => b.CRITICAL);
+    const highData = timeline.map(b => b.HIGH);
+    const elevatedData = timeline.map(b => b.ELEVATED);
+    const normalData = timeline.map(b => b.NORMAL);
+
+    if (timelineChart) timelineChart.destroy();
+
+    timelineChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Critical', data: criticalData, backgroundColor: '#ef4655' },
+          { label: 'High', data: highData, backgroundColor: '#f08a24' },
+          { label: 'Elevated', data: elevatedData, backgroundColor: '#e6b422' },
+          { label: 'Normal', data: normalData, backgroundColor: '#3fb68b' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#67738f', font: { size: 10 } } },
+          y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#67738f', font: { size: 10 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { color: '#9aa6bf', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  function renderMiniMap() {
+    const mapContainer = document.getElementById('overviewMap');
+    if (!mapContainer || leafletMap) return;
+
+    leafletMap = L.map('overviewMap', { zoomControl: false, attributionControl: false }).setView([20, 0], 1);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 6 }).addTo(leafletMap);
+
+    fetchMapPoints();
+  }
+
+  async function fetchMapPoints() {
+    try {
+      const res = await API.getSummary();
+      const pointsRes = await fetch('/api/map/points');
+      const pointsData = await pointsRes.json();
+
+      if (leafletMap && pointsData.points) {
+        mapMarkers.forEach(m => m.remove());
+        mapMarkers = [];
+        pointsData.points.forEach(p => {
+          const color = p.max_risk >= 75 ? '#ef4655' : p.max_risk >= 50 ? '#f08a24' : '#3fb68b';
+          const marker = L.circleMarker([p.lat, p.lng], {
+            radius: Math.max(5, Math.min(14, p.attack_count)),
+            fillColor: color,
+            color: '#fff',
+            weight: 1,
+            fillOpacity: 0.8
+          }).addTo(leafletMap);
+          marker.bindPopup(`<b>${esc(p.ip)}</b><br>${esc(p.city)}, ${esc(p.country)}<br>Risk: ${p.max_risk}/100`);
+          mapMarkers.push(marker);
+        });
+      }
+    } catch (e) {
+      console.warn('Map points fetch skipped:', e);
+    }
+  }
+
+  function renderTopAttackers(attackers) {
+    const tbody = document.getElementById('topAttackersBody');
+    if (!tbody) return;
+
+    if (!attackers.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--hn-text-faint); padding:24px;">No profile records yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = attackers.map(a => `
+      <tr onclick="window.location.href='/dashboard/attackers/${encodeURIComponent(a.ip)}'">
+        <td class="mono" style="font-weight:600;">${esc(a.ip)}</td>
+        <td>${esc(a.city)}, ${esc(a.country)}</td>
+        <td><span class="hn-chip hn-chip-new">${esc(a.top_attack)}</span></td>
+        <td>${formatRiskMeter(a.max_risk)}</td>
+        <td class="mono">${a.total_events}</td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadRecentAlerts() {
+    try {
+      const res = await API.getAlerts({ per_page: 5 });
+      const tbody = document.getElementById('recentAlertsBody');
+      if (!tbody) return;
+
+      if (!res.data.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--hn-text-faint); padding:24px;">No active alerts.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(al => `
+        <tr onclick="window.location.href='/dashboard/alerts'">
+          <td class="mono">${formatDate(al.timestamp)}</td>
+          <td>${formatSeverityBadge(al.severity)}</td>
+          <td style="font-weight:600;">${esc(al.title)}</td>
+          <td class="mono">${esc(al.source_ip)}</td>
+          <td><span class="hn-chip hn-chip-${al.status === 'NEW' ? 'new' : al.status === 'ACKNOWLEDGED' ? 'ack' : 'resolved'}">${al.status}</span></td>
+        </tr>
+      `).join('');
+    } catch (e) {}
+  }
+
+  async function loadRecentEvents() {
+    try {
+      const res = await API.getEvents({ per_page: 10 });
+      const tbody = document.getElementById('overviewStreamBody');
+      if (!tbody) return;
+
+      if (!res.data.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--hn-text-faint); padding:32px;">Waiting for incoming honeypot events...</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(ev => `
+        <tr onclick="openEventDetail('${ev.event_id}')">
+          <td class="mono">${formatDate(ev.timestamp)}</td>
+          <td class="mono" style="color:var(--hn-accent);">${esc(ev.source_ip)}</td>
+          <td><span class="hn-chip hn-chip-new">${esc(ev.attack_type)}</span></td>
+          <td class="mono">${esc(ev.endpoint)}</td>
+          <td>${formatSeverityBadge(ev.severity)}</td>
+          <td>${formatRiskMeter(ev.risk_score)}</td>
+        </tr>
+      `).join('');
+    } catch (e) {}
+  }
+
+  window.openEventDetail = async function(id) {
+    try {
+      const ev = await API.getEventById(id);
+      const content = `
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>${formatSeverityBadge(ev.severity)}</div>
+            <div class="mono" style="font-size:12px; color:var(--hn-text-faint);">${ev.event_id}</div>
+          </div>
+
+          <div style="background:var(--hn-bg-2); padding:12px; border-radius:6px; border:1px solid var(--hn-border);">
+            <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase;">Request Target</div>
+            <div class="mono" style="font-size:14px; margin-top:4px;"><strong>${esc(ev.http_method)}</strong> ${esc(ev.endpoint)}</div>
+            <div style="font-size:12px; color:var(--hn-text-dim); margin-top:4px;">Surface: ${esc(ev.surface)} • Event Type: ${esc(ev.event_type)}</div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase; margin-bottom:6px;">Captured Payload</div>
+            <div class="hn-code-block">${esc(ev.payload || '(None)')}</div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase; margin-bottom:6px;">Detection Rules Triggered</div>
+            ${ev.detections.length ? ev.detections.map(d => `
+              <div style="background:rgba(239,70,85,0.08); border:1px solid rgba(239,70,85,0.2); padding:10px; border-radius:6px; margin-bottom:8px;">
+                <div style="font-weight:700; font-size:13px; color:var(--hn-critical);">${esc(d.rule_id)}: ${esc(d.attack_type)} (+${d.points} pts)</div>
+                <div style="font-size:12px; color:var(--hn-text-dim); margin-top:2px;">${esc(d.reason)}</div>
+              </div>
+            `).join('') : '<div style="font-size:12px; color:var(--hn-text-faint);">No threat rules fired on this request.</div>'}
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:12px;">
+            <a href="/dashboard/sessions/${encodeURIComponent(ev.session_summary ? ev.session_summary.session_id : '')}" class="hn-btn hn-btn-secondary hn-btn-sm" style="flex:1;">View Session</a>
+            <a href="/dashboard/attackers/${encodeURIComponent(ev.source_ip)}" class="hn-btn hn-btn-secondary hn-btn-sm" style="flex:1;">Attacker Profile</a>
+          </div>
+        </div>
+      `;
+      openDrawer('Telemetry Event Inspection', content);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Real-time updates via SocketIO
+  SocketBus.on('new_event', (eventDto) => {
+    const tbody = document.getElementById('overviewStreamBody');
+    if (!tbody) return;
+
+    // Remove empty placeholder row
+    if (tbody.children.length === 1 && tbody.children[0].innerText.includes('Waiting for incoming')) {
+      tbody.innerHTML = '';
+    }
+
+    const row = document.createElement('tr');
+    row.className = 'hn-row-new';
+    row.onclick = () => openEventDetail(eventDto.event_id);
+    row.innerHTML = `
+      <td class="mono">${formatDate(eventDto.timestamp)}</td>
+      <td class="mono" style="color:var(--hn-accent);">${esc(eventDto.source_ip)}</td>
+      <td><span class="hn-chip hn-chip-new">${esc(eventDto.attack_type)}</span></td>
+      <td class="mono">${esc(eventDto.endpoint)}</td>
+      <td>${formatSeverityBadge(eventDto.severity)}</td>
+      <td>${formatRiskMeter(eventDto.risk_score)}</td>
+    `;
+
+    tbody.insertBefore(row, tbody.firstChild);
+    if (tbody.children.length > 20) tbody.removeChild(tbody.lastChild);
+
+    // Update KPI counter
+    const totEl = document.getElementById('kpiTotalEvents');
+    if (totEl) totEl.textContent = (parseInt(totEl.textContent.replace(/,/g, '') || 0) + 1).toLocaleString();
+  });
+
+  SocketBus.on('new_alert', () => {
+    loadRecentAlerts();
+    const critEl = document.getElementById('kpiCriticalAlerts');
+    if (critEl) critEl.textContent = parseInt(critEl.textContent || 0) + 1;
+  });
+
+  // Initial load
+  loadOverview();
+</script>
+{% endblock %}

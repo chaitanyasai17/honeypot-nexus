@@ -1,0 +1,82 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Attacker Profiles — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Attacker Threat Profiles</h1>
+    <div class="hn-page-sub">Correlated intelligence dossiers on identified threat sources and scanners</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <input type="text" id="searchIp" class="hn-input" placeholder="Search IP..." oninput="loadAttackers();">
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadAttackers();">⟳ Refresh</button>
+  </div>
+</div>
+
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Source IP</th>
+          <th>Location</th>
+          <th>Top Technique</th>
+          <th>Max Risk</th>
+          <th>Avg Risk</th>
+          <th>Engagement</th>
+          <th>Sessions</th>
+          <th>Events</th>
+          <th>Flags</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="attackersTableBody">
+        <tr><td colspan="10" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading profiles...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  window.loadAttackers = async function() {
+    const q = document.getElementById('searchIp').value.trim();
+    try {
+      const res = await API.getAttackers({ q });
+      const tbody = document.getElementById('attackersTableBody');
+
+      if (!res.data.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--hn-text-faint); padding:32px;">No attacker profiles found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.data.map(p => `
+        <tr onclick="window.location.href='/dashboard/attackers/${encodeURIComponent(p.source_ip)}'">
+          <td class="mono" style="font-weight:700; color:var(--hn-accent);">${esc(p.source_ip)}</td>
+          <td>${esc(p.city)}, ${esc(p.country)}</td>
+          <td><span class="hn-chip hn-chip-new">${esc(p.top_attack_type)}</span></td>
+          <td>${formatRiskMeter(p.max_risk)}</td>
+          <td class="mono">${p.avg_risk}</td>
+          <td class="mono">${p.engagement_score}/100</td>
+          <td class="mono">${p.total_sessions}</td>
+          <td class="mono">${p.total_events}</td>
+          <td>
+            ${p.vpn_detected ? '<span style="color:#d97706; font-size:11px; font-weight:700; margin-right:4px;">VPN</span>' : ''}
+            ${p.tor_detected ? '<span style="color:#ef4655; font-size:11px; font-weight:700;">TOR</span>' : ''}
+            ${!p.vpn_detected && !p.tor_detected ? '<span style="color:var(--hn-text-faint); font-size:11px;">CLEAN</span>' : ''}
+          </td>
+          <td class="mono">${formatDateTime(p.last_seen)}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  loadAttackers();
+</script>
+{% endblock %}

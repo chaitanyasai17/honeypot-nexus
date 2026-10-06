@@ -1,0 +1,129 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Session Investigation — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <div style="font-size: 12px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Session Investigation</div>
+    <h1 class="hn-page-title mono" style="color: var(--hn-accent);">{{ session.id }}</h1>
+    <div class="hn-page-sub">
+      Source: <a href="/dashboard/attackers/{{ session.source_ip }}" class="mono" style="font-weight:700;">{{ session.source_ip }}</a> •
+      Status: <span class="hn-chip hn-chip-new">{{ session.status.upper() }}</span> •
+      Events: {{ session.event_count }} interactions
+    </div>
+  </div>
+  <div>
+    <a href="/dashboard/sessions" class="hn-btn hn-btn-secondary hn-btn-sm">&larr; Back to Sessions</a>
+  </div>
+</div>
+
+<!-- Score Meters Row -->
+<div class="hn-grid-12" style="margin-bottom: 24px;">
+  <!-- Cumulative Risk Breakdown (6 cols) -->
+  <div class="hn-col-6">
+    <div class="hn-panel" style="padding: 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+        <span class="hn-panel-title">Explainable Risk Score</span>
+        <span class="hn-badge {{ 'hn-badge-critical' if session.risk_score >= 75 else 'hn-badge-high' if session.risk_score >= 50 else 'hn-badge-elevated' if session.risk_score >= 25 else 'hn-badge-normal' }}">
+          {{ session.risk_score }} / 100
+        </span>
+      </div>
+
+      <div style="font-size: 12px; color: var(--hn-text-dim); margin-bottom: 12px;">
+        Deterministic contributing components for this session:
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+        {% for item in session.score_breakdown_json.get('risk_components', []) %}
+        <div style="display: flex; justify-content: space-between; padding: 6px 10px; background: var(--hn-bg-2); border-radius: 4px;">
+          <span>{{ item.component }} — <small style="color:var(--hn-text-dim);">{{ item.reason }}</small></span>
+          <span class="mono" style="font-weight: 700; color: var(--hn-accent);">+{{ item.points }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Engagement Score Breakdown (6 cols) -->
+  <div class="hn-col-6">
+    <div class="hn-panel" style="padding: 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+        <span class="hn-panel-title">Attacker Engagement Depth</span>
+        <span class="hn-badge hn-badge-elevated">{{ session.engagement_score }} / 100</span>
+      </div>
+
+      <div style="font-size: 12px; color: var(--hn-text-dim); margin-bottom: 12px;">
+        Exploration factors contributing to interaction engagement:
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+        {% for item in session.score_breakdown_json.get('engagement_components', []) %}
+        <div style="display: flex; justify-content: space-between; padding: 6px 10px; background: var(--hn-bg-2); border-radius: 4px;">
+          <span>{{ item.component }} — <small style="color:var(--hn-text-dim);">{{ item.reason }}</small></span>
+          <span class="mono" style="font-weight: 700; color: var(--hn-cyan);">+{{ item.points }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Event Sequence Timeline -->
+<div class="hn-panel hn-panel-flush">
+  <div class="hn-panel-header">
+    <span class="hn-panel-title">Correlated Session Event Sequence</span>
+  </div>
+  <div class="hn-table-container">
+    <table class="hn-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Endpoint</th>
+          <th>Surface</th>
+          <th>Method</th>
+          <th>Attack Type</th>
+          <th>Severity</th>
+          <th>Risk</th>
+          <th>Payload Excerpt</th>
+        </tr>
+      </thead>
+      <tbody id="sessionTimelineBody">
+        <tr><td colspan="8" style="text-align: center; color: var(--hn-text-faint); padding: 32px;">Loading timeline...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  const sessId = "{{ session.id }}";
+
+  async function loadSessionTimeline() {
+    try {
+      const res = await API.getSessionDetail(sessId);
+      const tbody = document.getElementById('sessionTimelineBody');
+
+      tbody.innerHTML = res.timeline.map(e => `
+        <tr onclick="openEventDetail('${e.event_id}')">
+          <td class="mono">${formatDateTime(e.timestamp)}</td>
+          <td class="mono"><strong>${esc(e.endpoint)}</strong></td>
+          <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${esc(e.surface)}</span></td>
+          <td class="mono">${esc(e.http_method)}</td>
+          <td><span class="hn-chip hn-chip-new">${esc(e.attack_type)}</span></td>
+          <td>${formatSeverityBadge(e.severity)}</td>
+          <td>${formatRiskMeter(e.risk_score)}</td>
+          <td class="mono" style="color:var(--hn-cyan); font-size:12px;">${esc((e.payload || '').slice(0, 40))}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  loadSessionTimeline();
+</script>
+{% endblock %}

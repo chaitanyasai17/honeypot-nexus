@@ -1,0 +1,101 @@
+{% extends "honeypot/base.html" %}
+
+{% block title %}Administrator Control Center — {{ company }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 24px;">
+  <!-- Sidebar -->
+  <div style="width: 220px; flex-shrink: 0;">
+    <div class="card" style="padding: 12px;">
+      <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding-left: 8px;">
+        Administration
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        {% for s in sections %}
+        <a href="/admin/{{ s }}" style="padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{ 'var(--primary)' if section == s else '#334155' }}; background: {{ '#eff6ff' if section == s else 'transparent' }};">
+          {{ s.replace('_', ' ').title() }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Section Body -->
+  <div style="flex-grow: 1;">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700; color: #1e293b;">{{ section.replace('_', ' ').title() }} Management</h2>
+          <p style="font-size: 13px; color: var(--text-muted);">SecureCorp Production Cluster (Node: sc-web-01)</p>
+        </div>
+        <form method="POST" action="/admin/{{ section }}">
+          <input type="hidden" name="action" value="refresh">
+          <input type="hidden" name="target" value="{{ section }}">
+          <button type="submit" class="btn btn-secondary" style="font-size: 13px;">Sync Telemetry</button>
+        </form>
+      </div>
+
+      {% if message %}
+      <div class="alert-success">{{ message }}</div>
+      {% endif %}
+
+      {% if section == "overview" %}
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+          <div style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size: 12px; color: var(--text-muted);">Registered Users</div>
+            <div style="font-size: 24px; font-weight: 700;">142</div>
+          </div>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size: 12px; color: var(--text-muted);">Cluster Status</div>
+            <div style="font-size: 24px; font-weight: 700; color: #16a34a;">Healthy</div>
+          </div>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size: 12px; color: var(--text-muted);">Pending Security Patches</div>
+            <div style="font-size: 24px; font-weight: 700; color: #d97706;">2</div>
+          </div>
+        </div>
+        <p style="font-size: 14px; color: #334155;">Select an administrative module from the left menu to manage cluster services, users, and backup schedules.</p>
+
+      {% elif section == "users" %}
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+              <th style="padding: 8px;">User</th><th>Role</th><th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 8px;">admin</td><td>SuperAdmin</td><td><span style="color: green;">Active</span></td><td><form method="POST"><input type="hidden" name="action" value="suspend"><input type="hidden" name="target" value="admin"><button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Suspend</button></form></td></tr>
+            <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 8px;">jsmith</td><td>SecOps</td><td><span style="color: green;">Active</span></td><td><form method="POST"><input type="hidden" name="action" value="reset_pwd"><input type="hidden" name="target" value="jsmith"><button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">Reset Key</button></form></td></tr>
+          </tbody>
+        </table>
+
+      {% elif section == "api_keys" %}
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Active API credentials for inter-service communication:</p>
+        <div style="background: #f1f5f9; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; margin-bottom: 12px;">
+          PROD_GATEWAY_KEY: HNX-FAKE-APIKEY-99881122<br>
+          BILLING_WEBHOOK: HNX-FAKE-WH-00192837
+        </div>
+        <form method="POST">
+          <input type="hidden" name="action" value="rotate_keys">
+          <button class="btn">Rotate Production Keys</button>
+        </form>
+
+      {% elif section == "backups" %}
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Automated snapshot and database recovery images:</p>
+        <ul style="font-size: 13px; margin-left: 20px; line-height: 2;">
+          <li><code>database_backup.sql</code> (871 KB) — <a href="/files/download?path=/backups/database_backup.sql">Download Archive</a></li>
+          <li><code>network_config.conf</code> (1.1 KB) — <a href="/files/download?path=/config/network_config.conf">Download Config</a></li>
+        </ul>
+
+      {% else %}
+        <p style="font-size: 14px; color: #334155;">Synthetic administrative console for <strong>{{ section }}</strong>.</p>
+        <form method="POST" style="margin-top: 16px;">
+          <input type="hidden" name="action" value="update_settings">
+          <input type="hidden" name="target" value="{{ section }}">
+          <button class="btn">Apply Configuration Updates</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

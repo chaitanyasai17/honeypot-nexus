@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ company }}{% endblock %}</title>
+  <style>
+    :root {
+      --primary: #1d4ed8;
+      --primary-hover: #1e40af;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--primary); text-decoration: none; }
+    nav a { margin-left: 20px; text-decoration: none; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+    nav a:hover, nav a.active { color: var(--primary); }
+    .demo-bar { background: #fef3c7; color: #92400e; padding: 6px 16px; font-size: 12px; text-align: center; border-bottom: 1px solid #fde68a; font-weight: 500; }
+    .container { max-width: 1080px; margin: 32px auto; padding: 0 16px; }
+    footer { text-align: center; padding: 32px 16px; font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 48px; background: var(--surface); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .btn { display: inline-block; background: var(--primary); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e2e8f0; color: #334155; }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2); }
+    .alert-danger { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% if config.get('DEMO_MODE') %}
+  <div class="demo-bar">
+    🛡️ Demonstration Environment — SecureCorp is a synthetic organization for research & deception detection.
+  </div>
+  {% endif %}
+  <header>
+    <a href="/" class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      {{ company }}
+    </a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/login">Employee Portal</a>
+      <a href="/admin">Admin Console</a>
+      <a href="/files">File Repository</a>
+      <a href="/database">Database Query</a>
+      <a href="/api">API v1</a>
+      <a href="/shell">Web Terminal</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer>
+    &copy; 2026 {{ company }} — All rights reserved. Authorized corporate access only.
+  </footer>
+</body>
+</html>

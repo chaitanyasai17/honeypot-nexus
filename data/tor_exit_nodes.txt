@@ -1,0 +1,7 @@
+# Synthetic Tor Exit Node IP List for Honeypot Nexus Lab Demo
+198.51.100.1
+198.51.100.5
+198.51.100.9
+203.0.113.65
+203.0.113.70
+192.0.2.19
