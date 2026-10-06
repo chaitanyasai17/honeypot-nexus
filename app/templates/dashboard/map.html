@@ -2,138 +2,1385 @@
 
 {% block title %}Geographic Attack Map — Honeypot Nexus{% endblock %}
 
+{% block head %}
+<style>
+  /* -------------------------------------------------------------------------
+     Cybersecurity SOC Geographic Attack Map Styles
+     ------------------------------------------------------------------------- */
+  .hn-map-layout {
+    display: flex;
+    gap: 14px;
+    height: calc(100vh - 150px);
+    min-height: 640px;
+    position: relative;
+  }
+
+  /* Map Container Area */
+  .hn-map-canvas-container {
+    flex: 1;
+    position: relative;
+    background: #060913;
+    border: 1px solid var(--hn-border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  #fullAttackMap {
+    width: 100%;
+    height: 100%;
+    background: #060913 !important;
+  }
+
+  /* Hide default Leaflet attribution banner styles to keep dark aesthetic */
+  .leaflet-container {
+    background: #060913 !important;
+    font-family: var(--hn-font) !important;
+  }
+
+  .leaflet-control-attribution {
+    background: rgba(10, 14, 23, 0.75) !important;
+    color: var(--hn-text-faint) !important;
+    font-size: 10px !important;
+    border-radius: 4px;
+    padding: 2px 6px !important;
+    margin: 6px !important;
+    backdrop-filter: blur(4px);
+  }
+
+  .leaflet-control-attribution a {
+    color: var(--hn-text-dim) !important;
+    text-decoration: none;
+  }
+
+  .hn-country-tooltip {
+    background: rgba(15, 21, 35, 0.95) !important;
+    border: 1px solid var(--hn-border-strong) !important;
+    color: #e2e8f0 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.7) !important;
+    padding: 4px 8px !important;
+  }
+
+  /* Suppress broken tile images (No 403 or broken image icons) */
+  .leaflet-tile {
+    filter: brightness(0.85) contrast(1.15) hue-rotate(185deg) saturate(0.5);
+  }
+  img.leaflet-tile:not([src]), 
+  img.leaflet-tile[src=""] {
+    visibility: hidden !important;
+  }
+
+  /* -------------------------------------------------------------------------
+     Floating HUD Statistics Bar
+     ------------------------------------------------------------------------- */
+  .hn-map-hud-bar {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .hn-hud-stats-group {
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  .hn-hud-card {
+    background: rgba(15, 21, 35, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(45, 60, 95, 0.65);
+    border-radius: 6px;
+    padding: 6px 14px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .hn-hud-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hn-text-faint);
+  }
+
+  .hn-hud-value {
+    font-size: 18px;
+    font-weight: 800;
+    font-family: var(--hn-mono);
+    color: var(--hn-text);
+    line-height: 1.2;
+    margin-top: 1px;
+  }
+
+  .hn-hud-value.critical { color: var(--hn-sev-critical); }
+  .hn-hud-value.high { color: var(--hn-sev-high); }
+  .hn-hud-value.cyber { color: var(--hn-cyan); }
+  .hn-hud-value.normal { color: var(--hn-ok); }
+
+  /* -------------------------------------------------------------------------
+     Floating Cyber Map Controls Toolbar
+     ------------------------------------------------------------------------- */
+  .hn-map-controls-toolbar {
+    position: absolute;
+    top: 76px;
+    left: 14px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: auto;
+  }
+
+  .hn-ctrl-btn-group {
+    background: rgba(15, 21, 35, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(45, 60, 95, 0.65);
+    border-radius: 6px;
+    padding: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .hn-ctrl-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--hn-text-dim);
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .hn-ctrl-btn:hover {
+    background: var(--hn-bg-2);
+    color: var(--hn-text);
+    border-color: var(--hn-border);
+  }
+
+  .hn-toggle-pill-group {
+    background: rgba(15, 21, 35, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(45, 60, 95, 0.65);
+    border-radius: 6px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .hn-toggle-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--hn-text-dim);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .hn-toggle-btn:hover {
+    background: var(--hn-bg-2);
+    color: var(--hn-text);
+  }
+
+  .hn-toggle-btn.active {
+    background: rgba(76, 141, 255, 0.18);
+    color: var(--hn-accent);
+    border-color: rgba(76, 141, 255, 0.4);
+  }
+
+  .hn-toggle-btn .led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #475569;
+    box-shadow: none;
+    transition: all 0.15s ease;
+  }
+
+  .hn-toggle-btn.active .led {
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+  }
+
+  /* -------------------------------------------------------------------------
+     Target Marker (Honeypot Nexus Deception Hub)
+     ------------------------------------------------------------------------- */
+  .target-marker-wrapper {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .target-sonar-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1.5px solid #10b981;
+    opacity: 0;
+    pointer-events: none;
+    animation: targetSonar 2.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  }
+
+  .target-sonar-ring.r2 {
+    animation-delay: 0.9s;
+  }
+
+  .target-sonar-ring.r3 {
+    animation-delay: 1.8s;
+  }
+
+  @keyframes targetSonar {
+    0% { transform: scale(0.6); opacity: 0.9; }
+    50% { opacity: 0.5; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+
+  .target-core {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    background: radial-gradient(circle, #065f46 0%, #022c22 100%);
+    border: 2px solid #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6ee7b7;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.8), inset 0 0 8px rgba(16, 185, 129, 0.6);
+    z-index: 5;
+    transition: transform 0.2s ease;
+  }
+
+  .target-core:hover {
+    transform: scale(1.15);
+  }
+
+  .target-badge-label {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(6, 78, 59, 0.92);
+    border: 1px solid #10b981;
+    color: #a7f3d0;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+
+  /* -------------------------------------------------------------------------
+     Attacker Markers & Pulsing Auras
+     ------------------------------------------------------------------------- */
+  .attacker-marker-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .attacker-marker-wrapper:hover {
+    transform: scale(1.25);
+    z-index: 9999 !important;
+  }
+
+  .attacker-aura {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: attackerPulse 2s ease-out infinite;
+  }
+
+  @keyframes attackerPulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+
+  .attacker-core {
+    position: relative;
+    border-radius: 50%;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 0 12px currentColor;
+    z-index: 2;
+  }
+
+  .attacker-core.sev-critical {
+    background: #ef4444;
+    color: #ef4444;
+    border-color: #fee2e2;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.9);
+  }
+
+  .attacker-core.sev-high {
+    background: #f97316;
+    color: #f97316;
+    border-color: #ffedd5;
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.85);
+  }
+
+  .attacker-core.sev-elevated {
+    background: #fbbf24;
+    color: #fbbf24;
+    border-color: #fef3c7;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+  }
+
+  .attacker-core.sev-low {
+    background: #00e5ff;
+    color: #00e5ff;
+    border-color: #cffafe;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+  }
+
+  /* -------------------------------------------------------------------------
+     Attack Route Flow Lines & Animated Beams
+     ------------------------------------------------------------------------- */
+  .attack-beam-line {
+    stroke-dasharray: 6, 12;
+    animation: attackBeamFlow 1.6s linear infinite;
+  }
+
+  @keyframes attackBeamFlow {
+    from { stroke-dashoffset: 36; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* -------------------------------------------------------------------------
+     Cybersecurity Popup Card
+     ------------------------------------------------------------------------- */
+  .leaflet-popup-content-wrapper {
+    background: rgba(15, 21, 35, 0.96) !important;
+    border: 1px solid var(--hn-border-strong) !important;
+    border-radius: 8px !important;
+    color: var(--hn-text) !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8) !important;
+    padding: 0 !important;
+    backdrop-filter: blur(12px);
+  }
+
+  .leaflet-popup-content {
+    margin: 0 !important;
+    padding: 16px !important;
+    min-width: 260px;
+    font-family: var(--hn-font);
+  }
+
+  .leaflet-popup-tip {
+    background: rgba(15, 21, 35, 0.96) !important;
+    border: 1px solid var(--hn-border-strong) !important;
+  }
+
+  .hn-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--hn-border);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .hn-popup-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--hn-text-faint);
+  }
+
+  .hn-popup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+
+  .hn-popup-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hn-popup-item .label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--hn-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .hn-popup-item .val {
+    font-weight: 600;
+    color: var(--hn-text);
+  }
+
+  .hn-popup-footer {
+    border-top: 1px solid var(--hn-border);
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* -------------------------------------------------------------------------
+     Right-Side Live Attack Panel
+     ------------------------------------------------------------------------- */
+  .hn-live-attacks-panel {
+    width: 360px;
+    flex-shrink: 0;
+    background: var(--hn-bg-1);
+    border: 1px solid var(--hn-border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .hn-live-panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--hn-border);
+    background: rgba(15, 21, 35, 0.95);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .hn-live-header-title {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hn-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hn-radar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+    animation: radarBlink 1.4s ease-in-out infinite;
+  }
+
+  @keyframes radarBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .hn-live-attacks-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hn-attack-feed-row {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hn-border);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hn-attack-feed-row:hover {
+    background: var(--hn-bg-2);
+    border-left: 3px solid var(--hn-accent);
+  }
+
+  .hn-feed-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .hn-feed-row-mid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2px;
+  }
+
+  .hn-feed-row-bot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--hn-text-faint);
+    margin-top: 2px;
+  }
+
+  /* Offline Banner Pill */
+  .hn-map-status-pill {
+    position: absolute;
+    bottom: 12px;
+    left: 14px;
+    z-index: 1000;
+    background: rgba(15, 21, 35, 0.88);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--hn-border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 11px;
+    color: var(--hn-text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
+<!-- Top Header -->
 <div class="hn-page-header">
   <div>
-    <h1 class="hn-page-title">Geographic Threat Map</h1>
-    <div class="hn-page-sub">Global origin points and network attribution of honeypot interactions</div>
+    <h1 class="hn-page-title" style="display:flex; align-items:center; gap:10px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--hn-cyan);"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      Geographic Attack Map
+    </h1>
+    <div class="hn-page-sub">Global threat origin telemetry, real-time attack trajectories, and deception target defense</div>
   </div>
-  <div style="display:flex; gap:10px; align-items:center;">
-    <span class="hn-chip" style="background:#fef3c7; color:#92400e;">SIMULATED GEO TELEMETRY</span>
-    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadMapData();">⟳ Refresh Points</button>
+
+  <div style="display:flex; gap:12px; align-items:center;">
+    <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--hn-text-dim);">
+      <span class="hn-dot hn-dot-live" id="socketLiveDot"></span>
+      <span id="socketLiveText">LIVE STREAM</span>
+      <span style="color:var(--hn-text-faint); margin:0 4px;">•</span>
+      <span id="lastUpdatedTs" class="mono" style="font-size:11px;">--:--:--</span>
+    </div>
+
+    <button id="btnSimulateAttacks" class="hn-btn hn-btn-primary hn-btn-sm" style="display:flex; align-items:center; gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Simulate Attack Stream
+    </button>
   </div>
 </div>
 
-<div style="display:flex; gap:16px; height: calc(100vh - 200px);">
-  <!-- Map container -->
-  <div class="hn-panel hn-panel-flush" style="flex-grow: 1; height: 100%; position: relative;">
-    <div id="fullAttackMap" style="width: 100%; height: 100%; background: #0a0e17;"></div>
+<!-- Main Threat Map Layout -->
+<div class="hn-map-layout">
 
-    <div style="position: absolute; bottom: 12px; left: 12px; z-index: 1000; background: rgba(15, 21, 35, 0.85); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--hn-border); font-size: 11px; color: var(--hn-text-dim);">
-      ⚠️ Locations are approximate and derived from synthetic threat intelligence; not physical addresses.
-    </div>
-  </div>
+  <!-- Map Canvas & HUD -->
+  <div class="hn-map-canvas-container">
+    <div id="fullAttackMap"></div>
 
-  <!-- Origin telemetry side panel -->
-  <div class="hn-panel" style="width: 340px; flex-shrink: 0; display:flex; flex-direction:column;">
-    <div class="hn-panel-header">
-      <span class="hn-panel-title">Active Origin Clusters</span>
-      <span id="pointCountBadge" class="hn-chip hn-chip-new">0 Sources</span>
-    </div>
-    <div class="hn-panel-body" style="overflow-y: auto; padding: 0;">
-      <div id="mapSourcesList" style="display:flex; flex-direction:column;">
-        <div style="padding: 24px; text-align: center; color: var(--hn-text-faint); font-size: 13px;">
-          Scanning coordinates...
+    <!-- Floating HUD Statistics Bar -->
+    <div class="hn-map-hud-bar">
+      <div class="hn-hud-stats-group">
+        <div class="hn-hud-card">
+          <div class="hn-hud-label">Active Attackers</div>
+          <div class="hn-hud-value cyber" id="hudActiveAttackers">--</div>
+        </div>
+
+        <div class="hn-hud-card">
+          <div class="hn-hud-label">Active Sessions</div>
+          <div class="hn-hud-value" id="hudActiveSessions">--</div>
+        </div>
+
+        <div class="hn-hud-card">
+          <div class="hn-hud-label">Attacks / 24H</div>
+          <div class="hn-hud-value" id="hudTotalAttacks">--</div>
+        </div>
+
+        <div class="hn-hud-card">
+          <div class="hn-hud-label">Critical Threat</div>
+          <div class="hn-hud-value critical" id="hudCriticalCount">--</div>
+        </div>
+
+        <div class="hn-hud-card">
+          <div class="hn-hud-label">Average Risk</div>
+          <div class="hn-hud-value high" id="hudAvgRisk">--</div>
         </div>
       </div>
     </div>
+
+    <!-- Floating Cyber Map Controls Toolbar -->
+    <div class="hn-map-controls-toolbar">
+      <div class="hn-ctrl-btn-group">
+        <button class="hn-ctrl-btn" id="btnZoomIn" title="Zoom In">+</button>
+        <button class="hn-ctrl-btn" id="btnZoomOut" title="Zoom Out">−</button>
+        <button class="hn-ctrl-btn" id="btnResetView" title="Reset View">⟲</button>
+        <button class="hn-ctrl-btn" id="btnFullscreen" title="Toggle Fullscreen">⛶</button>
+      </div>
+
+      <div class="hn-toggle-pill-group">
+        <button class="hn-toggle-btn active" id="toggleRoutes" title="Toggle Attack Trajectories">
+          <span class="led"></span>
+          <span>Attack Routes</span>
+        </button>
+        <button class="hn-toggle-btn active" id="toggleAttackers" title="Toggle Attacker Locations">
+          <span class="led"></span>
+          <span>Attackers</span>
+        </button>
+        <button class="hn-toggle-btn active" id="toggleTarget" title="Toggle Deception Server">
+          <span class="led"></span>
+          <span>Target Core</span>
+        </button>
+        <button class="hn-toggle-btn" id="toggleHeatmap" title="Toggle Density Heatmap">
+          <span class="led"></span>
+          <span>Heatmap</span>
+        </button>
+        <button class="hn-toggle-btn" id="toggleBasemap" title="Switch Basemap Engine">
+          <span class="led"></span>
+          <span id="basemapModeLabel">Offline Vector</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status & Attribution Pill -->
+    <div class="hn-map-status-pill">
+      <span style="color:#10b981;">●</span>
+      <span id="mapEngineStatus">Vector Engine (100% Offline)</span>
+      <span style="color:var(--hn-border);">|</span>
+      <span>Synthetic Threat Telemetry</span>
+    </div>
   </div>
+
+  <!-- Right-Side Live Attacks Panel -->
+  <div class="hn-live-attacks-panel">
+    <div class="hn-live-panel-header">
+      <div class="hn-live-header-title">
+        <span class="hn-radar-dot"></span>
+        <span>Live Attacks</span>
+      </div>
+      <span class="hn-chip hn-chip-critical" id="liveFeedCount">0 Events</span>
+    </div>
+
+    <div class="hn-live-attacks-list" id="liveAttacksFeed">
+      <div style="padding: 32px 20px; text-align: center; color: var(--hn-text-faint); font-size: 13px;">
+        Connecting to Honeypot Nexus EventBus telemetry...
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script type="module">
   import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
-  import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
-  import { formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
+  import { esc, showToast } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatRiskMeter, formatSeverityBadge } from "{{ url_for('static', filename='js/core/format.js') }}";
+  import { SocketBus } from "{{ url_for('static', filename='js/core/socket.js') }}";
 
+  // -------------------------------------------------------------------------
+  // Application State
+  // -------------------------------------------------------------------------
   let map = null;
-  let markers = [];
+  let tileLayer = null;
+  let vectorLayer = null;
+  let heatmapLayer = null;
 
-  function initMap() {
-    map = L.map('fullAttackMap', { zoomControl: true }).setView([25, 10], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 10,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+  let attackerMarkers = new Map(); // ip -> marker
+  let routeLines = [];             // array of polyline routes
+  let targetMarker = null;
 
-    loadMapData();
+  let currentPoints = [];
+  let liveEventsLog = [];
+  let targetLocation = { lat: 50.1109, lng: 8.6821, name: "Frankfurt Deception Hub" };
+
+  let showRoutes = true;
+  let showAttackers = true;
+  let showTarget = true;
+  let showHeatmap = false;
+  let basemapMode = 'vector'; // 'vector' (100% offline, guaranteed zero 403s) or 'carto'
+
+  const LOCAL_GEOJSON_PATH = "{{ url_for('static', filename='vendor/world-countries.json') }}";
+
+  // -------------------------------------------------------------------------
+  // Map Initialization
+  // -------------------------------------------------------------------------
+  async function initMap() {
+    map = L.map('fullAttackMap', {
+      zoomControl: false,
+      attributionControl: true,
+      minZoom: 1.8,
+      maxZoom: 8,
+      worldCopyJump: true
+    }).setView([26, 10], 2.2);
+
+    // Load Offline Vector Layer first to guarantee immediate, zero-error display
+    await loadVectorWorldMap();
+
+    // Setup custom controls & event listeners
+    setupControlButtons();
+
+    // Fetch initial backend point data & HUD stats
+    await loadPointsData();
+
+    // Listen to live WebSocket telemetry stream
+    initSocketListeners();
+
+    // Initial timestamp
+    updateTimestamp();
   }
 
-  window.loadMapData = async function() {
+  // -------------------------------------------------------------------------
+  // Basemap Engine (Guaranteed Zero 403 Errors)
+  // -------------------------------------------------------------------------
+  async function loadVectorWorldMap() {
     try {
-      const res = await fetch('/api/map/points');
-      const data = await res.json();
-      const points = data.points || [];
+      const resp = await fetch(LOCAL_GEOJSON_PATH);
+      if (!resp.ok) throw new Error("Local world GeoJSON fetch failed");
+      const geojson = await resp.json();
 
-      document.getElementById('pointCountBadge').textContent = `${points.length} Sources`;
-
-      // Clear existing markers
-      markers.forEach(m => m.remove());
-      markers = [];
-
-      const listEl = document.getElementById('mapSourcesList');
-
-      if (!points.length) {
-        listEl.innerHTML = '<div style="padding:24px; text-align:center; color:var(--hn-text-faint);">No geographic points plotted yet.</div>';
-        return;
+      if (vectorLayer) {
+        map.removeLayer(vectorLayer);
       }
 
-      listEl.innerHTML = '';
+      vectorLayer = L.geoJSON(geojson, {
+        style: {
+          fillColor: '#0f172a',
+          fillOpacity: 0.95,
+          color: '#1e293b',
+          weight: 0.75
+        },
+        onEachFeature: (feature, layer) => {
+          layer.on({
+            mouseover: (e) => {
+              const l = e.target;
+              l.setStyle({
+                fillColor: '#1e293b',
+                color: '#38bdf8',
+                weight: 1.2
+              });
+            },
+            mouseout: (e) => {
+              vectorLayer.resetStyle(e.target);
+            }
+          });
+          if (feature.properties && feature.properties.name) {
+            layer.bindTooltip(feature.properties.name, {
+              sticky: true,
+              className: 'hn-country-tooltip'
+            });
+          }
+        }
+      }).addTo(map);
 
-      points.forEach(p => {
-        const color = p.max_risk >= 75 ? '#ef4655' : p.max_risk >= 50 ? '#f08a24' : '#3fb68b';
-        const marker = L.circleMarker([p.lat, p.lng], {
-          radius: Math.max(6, Math.min(16, p.attack_count)),
-          fillColor: color,
-          color: '#ffffff',
-          weight: 1.5,
-          fillOpacity: 0.85
-        }).addTo(map);
+      document.getElementById('mapEngineStatus').textContent = "Cyber Vector Engine (100% Offline)";
+    } catch (err) {
+      console.warn("Local vector map load warning:", err);
+    }
+  }
 
-        const popupHtml = `
-          <div style="font-family:var(--hn-font); font-size:12px; line-height:1.4;">
-            <div style="font-weight:700; color:#0f172a; margin-bottom:4px;">${esc(p.ip)}</div>
-            <div><strong>Location:</strong> ${esc(p.city)}, ${esc(p.country)}</div>
-            <div><strong>ISP:</strong> ${esc(p.isp)} (${esc(p.asn)})</div>
-            <div><strong>Attacks:</strong> ${p.attack_count} events</div>
-            <div><strong>Max Risk:</strong> ${p.max_risk}/100</div>
-            ${p.vpn ? '<div style="color:#d97706; font-weight:700;">• Suspected VPN Node</div>' : ''}
-            ${p.tor ? '<div style="color:#b91c1c; font-weight:700;">• Tor Exit Node Match</div>' : ''}
-            <div style="margin-top:6px;"><a href="/dashboard/attackers/${encodeURIComponent(p.ip)}" style="color:#1d4ed8; font-weight:600;">View Profile &rarr;</a></div>
-          </div>
-        `;
-        marker.bindPopup(popupHtml);
-        markers.push(marker);
+  function activateCartoDarkBasemap() {
+    try {
+      if (tileLayer) {
+        map.removeLayer(tileLayer);
+        tileLayer = null;
+      }
 
-        // Sidebar row
-        const row = document.createElement('div');
-        row.style.cssText = 'padding:12px 16px; border-bottom:1px solid var(--hn-border); cursor:pointer;';
-        row.onmouseover = () => { row.style.background = 'var(--hn-bg-2)'; };
-        row.onmouseout = () => { row.style.background = 'transparent'; };
-        row.onclick = () => {
-          map.setView([p.lat, p.lng], 5);
-          marker.openPopup();
-        };
-
-        row.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="mono" style="font-weight:700; color:var(--hn-text); font-size:13px;">${esc(p.ip)}</div>
-            <span class="hn-chip hn-chip-new">${esc(p.top_attack)}</span>
-          </div>
-          <div style="font-size:12px; color:var(--hn-text-dim); margin-top:2px;">
-            ${esc(p.city)}, ${esc(p.country)} • ${p.attack_count} events
-          </div>
-          <div style="margin-top:6px;">
-            ${formatRiskMeter(p.max_risk)}
-          </div>
-        `;
-        listEl.appendChild(row);
+      let errorCount = 0;
+      tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 8,
+        attribution: '&copy; CartoDB &copy; OpenStreetMap'
       });
 
+      tileLayer.on('tileerror', function() {
+        errorCount++;
+        // If external tiles fail (network block, offline, or 403), gracefully discard tileLayer
+        if (errorCount > 3) {
+          console.warn("External tiles failed; falling back automatically to 100% offline vector map.");
+          if (tileLayer) {
+            map.removeLayer(tileLayer);
+            tileLayer = null;
+          }
+          basemapMode = 'vector';
+          document.getElementById('basemapModeLabel').textContent = "Offline Vector";
+          document.getElementById('mapEngineStatus').textContent = "Fallback Vector Engine (Zero Errors)";
+        }
+      });
+
+      tileLayer.addTo(map);
+      document.getElementById('mapEngineStatus').textContent = "Carto Dark Canvas + Vector Overlay";
     } catch (err) {
-      console.error('Failed to load map data:', err);
+      console.warn("Carto basemap setup failed:", err);
+    }
+  }
+
+  function toggleBasemapEngine() {
+    if (basemapMode === 'vector') {
+      basemapMode = 'carto';
+      document.getElementById('basemapModeLabel').textContent = "Carto Dark";
+      activateCartoDarkBasemap();
+    } else {
+      basemapMode = 'vector';
+      document.getElementById('basemapModeLabel').textContent = "Offline Vector";
+      if (tileLayer) {
+        map.removeLayer(tileLayer);
+        tileLayer = null;
+      }
+      document.getElementById('mapEngineStatus').textContent = "Cyber Vector Engine (100% Offline)";
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Fetch Backend Points, Target & Statistics
+  // -------------------------------------------------------------------------
+  window.loadPointsData = async function() {
+    try {
+      const res = await fetch('/api/map/points');
+      if (!res.ok) throw new Error("Failed to fetch map points");
+      const data = await res.json();
+
+      currentPoints = data.points || [];
+
+      // Update Target Node from backend
+      if (data.target && data.target.lat && data.target.lng) {
+        targetLocation = {
+          lat: data.target.lat,
+          lng: data.target.lng,
+          name: data.target.name || "HONEYPOT NEXUS SERVER",
+          city: data.target.city || "Deception Hub",
+          surfaces: data.target.surfaces || []
+        };
+      }
+
+      // Update Floating HUD Stats
+      if (data.stats) {
+        document.getElementById('hudActiveAttackers').textContent = data.stats.active_attackers;
+        document.getElementById('hudActiveSessions').textContent = data.stats.active_sessions;
+        document.getElementById('hudTotalAttacks').textContent = data.stats.total_events;
+        document.getElementById('hudCriticalCount').textContent = data.stats.critical_count;
+        document.getElementById('hudAvgRisk').textContent = `${data.stats.avg_risk}/100`;
+      }
+
+      // Render Visual Elements
+      renderTargetMarker();
+      renderAttackerMarkers(currentPoints);
+      if (showRoutes) renderAttackRoutes(currentPoints);
+      renderLiveAttackFeed(currentPoints);
+
+      updateTimestamp();
+    } catch (err) {
+      console.error("Map telemetry load failed:", err);
     }
   };
 
+  // -------------------------------------------------------------------------
+  // Target Marker Rendering
+  // -------------------------------------------------------------------------
+  function renderTargetMarker() {
+    if (targetMarker) {
+      map.removeLayer(targetMarker);
+      targetMarker = null;
+    }
+
+    if (!showTarget) return;
+
+    const iconHtml = `
+      <div class="target-marker-wrapper" id="honeypotTargetNode">
+        <div class="target-sonar-ring"></div>
+        <div class="target-sonar-ring r2"></div>
+        <div class="target-sonar-ring r3"></div>
+        <div class="target-core">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="target-badge-label">TARGET: DECEPTION SERVER</div>
+      </div>
+    `;
+
+    const icon = L.divIcon({
+      html: iconHtml,
+      className: '',
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
+    });
+
+    targetMarker = L.marker([targetLocation.lat, targetLocation.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+
+    const targetPopupHtml = `
+      <div style="font-family:var(--hn-font); font-size:12px; line-height:1.4;">
+        <div style="font-size:11px; font-weight:800; color:#10b981; letter-spacing:0.06em; margin-bottom:4px;">
+          ● DECEPTION CORE ONLINE
+        </div>
+        <div style="font-size:13px; font-weight:700; color:var(--hn-text);">${esc(targetLocation.name)}</div>
+        <div style="color:var(--hn-text-dim); margin-top:2px;">Location: ${esc(targetLocation.city)}</div>
+        <div style="margin-top:8px; font-size:11px; color:var(--hn-text-faint);">
+          Protected Surfaces: <code>/login</code>, <code>/admin</code>, <code>/api</code>, <code>/files</code>, <code>/database</code>, <code>/shell</code>
+        </div>
+      </div>
+    `;
+    targetMarker.bindPopup(targetPopupHtml);
+  }
+
+  // -------------------------------------------------------------------------
+  // Attacker Markers Rendering
+  // -------------------------------------------------------------------------
+  function renderAttackerMarkers(points) {
+    // Clear old markers
+    attackerMarkers.forEach(m => map.removeLayer(m));
+    attackerMarkers.clear();
+
+    if (!showAttackers) return;
+
+    points.forEach(p => {
+      const sevClass = `sev-${(p.severity || 'low').toLowerCase()}`;
+      const size = Math.min(26, Math.max(14, 12 + Math.min(p.attack_count, 12)));
+
+      const markerHtml = `
+        <div class="attacker-marker-wrapper" style="width:${size}px; height:${size}px;">
+          <div class="attacker-aura ${sevClass}"></div>
+          <div class="attacker-core ${sevClass}" style="width:${size - 4}px; height:${size - 4}px;"></div>
+        </div>
+      `;
+
+      const icon = L.divIcon({
+        html: markerHtml,
+        className: '',
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2]
+      });
+
+      const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+
+      // Cyber Attacker Profile Popup
+      const sevColor = p.severity === 'CRITICAL' ? '#ef4444' : p.severity === 'HIGH' ? '#f97316' : p.severity === 'ELEVATED' ? '#fbbf24' : '#00e5ff';
+
+      const popupHtml = `
+        <div class="hn-popup-header">
+          <span class="hn-popup-title">ATTACKER PROFILE</span>
+          <span class="hn-chip" style="background:rgba(239,68,68,0.15); color:${sevColor}; border:1px solid ${sevColor};">${esc(p.severity)}</span>
+        </div>
+
+        <div class="hn-popup-grid">
+          <div class="hn-popup-item">
+            <span class="label">IP Address</span>
+            <span class="val mono">${esc(p.ip)}</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">Location</span>
+            <span class="val">${esc(p.city)}, ${esc(p.country)}</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">Top Attack Vector</span>
+            <span class="val">${esc(p.top_attack || 'Recon')}</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">Risk Score</span>
+            <span class="val" style="color:${sevColor}; font-weight:700;">${p.max_risk}/100</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">Session ID</span>
+            <span class="val mono">${esc(p.session_id || 'SES-001')}</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">Engagement</span>
+            <span class="val">${p.engagement || 50}%</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">First Seen</span>
+            <span class="val mono">${esc(p.first_seen || '--:--:--')}</span>
+          </div>
+
+          <div class="hn-popup-item">
+            <span class="label">Last Activity</span>
+            <span class="val mono">${esc(p.last_activity || '--:--:--')}</span>
+          </div>
+        </div>
+
+        <div style="font-size:11px; color:var(--hn-text-dim); margin-bottom:12px;">
+          ISP: ${esc(p.isp || 'Synthetic Provider')} (${esc(p.asn || 'AS0')})
+          ${p.vpn ? ' • <span style="color:#f59e0b; font-weight:700;">VPN Node</span>' : ''}
+          ${p.tor ? ' • <span style="color:#ef4444; font-weight:700;">Tor Exit</span>' : ''}
+        </div>
+
+        <div class="hn-popup-footer">
+          <span style="font-size:11px; color:var(--hn-ok);">● STATUS: ${esc(p.status || 'ACTIVE')}</span>
+          <a href="/dashboard/attackers/${encodeURIComponent(p.ip)}" class="hn-btn hn-btn-secondary hn-btn-sm" style="font-size:11px;">
+            Profile &rarr;
+          </a>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml);
+      attackerMarkers.set(p.ip, marker);
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Curved Geodesic Attack Route Beams (Attacker -> Honeypot Target)
+  // -------------------------------------------------------------------------
+  function renderAttackRoutes(points) {
+    // Clear old lines
+    routeLines.forEach(l => map.removeLayer(l));
+    routeLines = [];
+
+    if (!showRoutes || !targetLocation) return;
+
+    points.forEach(p => {
+      const lat1 = p.lat;
+      const lng1 = p.lng;
+      const lat2 = targetLocation.lat;
+      const lng2 = targetLocation.lng;
+
+      // Calculate curved quadratic bezier path points
+      const curvePoints = generateArcPoints(lat1, lng1, lat2, lng2, 24);
+
+      const sevColor = p.severity === 'CRITICAL' ? '#ef4444' : p.severity === 'HIGH' ? '#f97316' : p.severity === 'ELEVATED' ? '#fbbf24' : '#00e5ff';
+
+      // 1. Static glow path
+      const baseLine = L.polyline(curvePoints, {
+        color: sevColor,
+        weight: 1.2,
+        opacity: 0.25,
+        interactive: false
+      }).addTo(map);
+      routeLines.push(baseLine);
+
+      // 2. Animated laser tracer line flowing toward target
+      const animatedLine = L.polyline(curvePoints, {
+        color: sevColor,
+        weight: 2.2,
+        opacity: 0.85,
+        className: 'attack-beam-line',
+        interactive: false
+      }).addTo(map);
+      routeLines.push(animatedLine);
+    });
+  }
+
+  function generateArcPoints(lat1, lng1, lat2, lng2, numSteps = 24) {
+    const points = [];
+    // Calculate midpoint with perpendicular curvature offset
+    const midLat = (lat1 + lat2) / 2;
+    const midLng = (lng1 + lng2) / 2;
+
+    const dLng = lng2 - lng1;
+    const dLat = lat2 - lat1;
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+
+    // Arch height
+    const curveOffset = Math.min(25, Math.max(8, dist * 0.2));
+    const controlLat = midLat + curveOffset;
+    const controlLng = midLng;
+
+    for (let i = 0; i <= numSteps; i++) {
+      const t = i / numSteps;
+      const lat = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * controlLat + t * t * lat2;
+      const lng = (1 - t) * (1 - t) * lng1 + 2 * (1 - t) * t * controlLng + t * t * lng2;
+      points.push([lat, lng]);
+    }
+
+    return points;
+  }
+
+  // -------------------------------------------------------------------------
+  // Heatmap Layer (SIEM Density Concentration)
+  // -------------------------------------------------------------------------
+  function renderHeatmapLayer() {
+    if (heatmapLayer) {
+      map.removeLayer(heatmapLayer);
+      heatmapLayer = null;
+    }
+
+    if (!showHeatmap) return;
+
+    heatmapLayer = L.layerGroup();
+    currentPoints.forEach(p => {
+      const radius = Math.min(600000, Math.max(200000, p.attack_count * 25000));
+      const color = p.max_risk >= 80 ? '#ef4444' : p.max_risk >= 60 ? '#f97316' : '#00e5ff';
+
+      const heatCircle = L.circle([p.lat, p.lng], {
+        radius: radius,
+        fillColor: color,
+        fillOpacity: 0.22,
+        stroke: false,
+        interactive: false
+      });
+      heatmapLayer.addLayer(heatCircle);
+    });
+
+    heatmapLayer.addTo(map);
+  }
+
+  // -------------------------------------------------------------------------
+  // Right-Side Live Attack Feed Rendering
+  // -------------------------------------------------------------------------
+  function renderLiveAttackFeed(points) {
+    const feedContainer = document.getElementById('liveAttacksFeed');
+    document.getElementById('liveFeedCount').textContent = `${points.length} Sources`;
+
+    if (!points.length) {
+      feedContainer.innerHTML = '<div style="padding:24px; text-align:center; color:var(--hn-text-faint);">No active attacks recorded.</div>';
+      return;
+    }
+
+    feedContainer.innerHTML = '';
+
+    points.forEach(p => {
+      const sevBadge = p.severity === 'CRITICAL' ? '<span class="hn-badge hn-badge-critical">CRITICAL</span>' :
+                       p.severity === 'HIGH' ? '<span class="hn-badge hn-badge-high">HIGH</span>' :
+                       p.severity === 'ELEVATED' ? '<span class="hn-badge hn-badge-elevated">ELEVATED</span>' :
+                       '<span class="hn-badge hn-badge-normal">LOW</span>';
+
+      const row = document.createElement('div');
+      row.className = 'hn-attack-feed-row';
+      row.onclick = () => {
+        focusAttacker(p.ip, p.lat, p.lng);
+      };
+
+      row.innerHTML = `
+        <div class="hn-feed-row-top">
+          <div style="display:flex; align-items:center; gap:6px;">
+            ${sevBadge}
+            <span style="font-weight:700; color:var(--hn-text); font-size:12px;">${esc(p.top_attack || 'Probe')}</span>
+          </div>
+          <span style="font-size:11px; font-weight:700; color:${p.max_risk >= 80 ? '#ef4444' : '#f97316'}; font-family:var(--hn-mono);">
+            Risk ${p.max_risk}
+          </span>
+        </div>
+
+        <div class="hn-feed-row-mid">
+          <span class="mono" style="font-size:12px; font-weight:700; color:var(--hn-cyan);">${esc(p.ip)}</span>
+          <span style="font-size:11px; color:var(--hn-text-dim);">${esc(p.city)}, ${esc(p.country)}</span>
+        </div>
+
+        <div class="hn-feed-row-bot">
+          <span>${p.attack_count} events recorded</span>
+          <span class="mono">${esc(p.last_activity || '--:--:--')}</span>
+        </div>
+      `;
+
+      feedContainer.appendChild(row);
+    });
+  }
+
+  function focusAttacker(ip, lat, lng) {
+    map.setView([lat, lng], 4, { animate: true });
+    const marker = attackerMarkers.get(ip);
+    if (marker) {
+      marker.openPopup();
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Live WebSocket Integration
+  // -------------------------------------------------------------------------
+  function initSocketListeners() {
+    SocketBus.init();
+
+    // Listen to real-time incoming attacks
+    SocketBus.on('new_event', (eventDto) => {
+      handleLiveEvent(eventDto);
+    });
+
+    SocketBus.on('new_attack', (attackPayload) => {
+      if (attackPayload && attackPayload.event) {
+        handleLiveEvent(attackPayload.event);
+      }
+    });
+
+    SocketBus.on('kpi_update', (kpis) => {
+      if (kpis) {
+        if (kpis.active_attackers !== undefined) document.getElementById('hudActiveAttackers').textContent = kpis.active_attackers;
+        if (kpis.active_sessions !== undefined) document.getElementById('hudActiveSessions').textContent = kpis.active_sessions;
+        if (kpis.total_events !== undefined) document.getElementById('hudTotalAttacks').textContent = kpis.total_events;
+      }
+    });
+  }
+
+  function handleLiveEvent(evt) {
+    if (!evt || !evt.source_ip) return;
+
+    updateTimestamp();
+
+    // Pulse Target Node
+    const targetEl = document.getElementById('honeypotTargetNode');
+    if (targetEl) {
+      targetEl.style.transform = 'scale(1.25)';
+      setTimeout(() => { if (targetEl) targetEl.style.transform = 'scale(1)'; }, 350);
+    }
+
+    // Check if attacker exists in current points
+    let existing = currentPoints.find(p => p.ip === evt.source_ip);
+
+    if (existing) {
+      existing.attack_count += 1;
+      existing.max_risk = Math.max(existing.max_risk, evt.risk_score || 0);
+      existing.last_activity = new Date().toTimeString().split(' ')[0];
+      if (evt.attack_type && evt.attack_type !== 'NONE') {
+        existing.top_attack = evt.attack_type;
+      }
+    } else if (evt.latitude && evt.longitude) {
+      // Add new live point
+      const newPoint = {
+        ip: evt.source_ip,
+        lat: evt.latitude,
+        lng: evt.longitude,
+        country: evt.geo_country || "Unknown",
+        city: evt.geo_city || "Unknown",
+        isp: evt.isp || "Synthetic Provider",
+        asn: evt.asn || "None",
+        attack_count: 1,
+        max_risk: evt.risk_score || 50,
+        severity: evt.severity || "HIGH",
+        top_attack: evt.attack_type || "Probe",
+        vpn: evt.vpn_detected || false,
+        tor: evt.tor_detected || false,
+        engagement: evt.engagement_score || 40,
+        session_id: evt.session_id || "SES-LIVE",
+        first_seen: new Date().toTimeString().split(' ')[0],
+        last_activity: new Date().toTimeString().split(' ')[0],
+        status: "ACTIVE"
+      };
+      currentPoints.unshift(newPoint);
+    }
+
+    // Refresh display
+    renderAttackerMarkers(currentPoints);
+    if (showRoutes) renderAttackRoutes(currentPoints);
+    renderLiveAttackFeed(currentPoints);
+  }
+
+  // -------------------------------------------------------------------------
+  // Map Controls & Event Handlers
+  // -------------------------------------------------------------------------
+  function setupControlButtons() {
+    document.getElementById('btnZoomIn').onclick = () => map.zoomIn();
+    document.getElementById('btnZoomOut').onclick = () => map.zoomOut();
+    document.getElementById('btnResetView').onclick = () => map.setView([26, 10], 2.2);
+
+    document.getElementById('btnFullscreen').onclick = () => {
+      const container = document.querySelector('.hn-map-canvas-container');
+      if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => alert("Fullscreen error: " + err.message));
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    // Toggle Attack Routes
+    const btnRoutes = document.getElementById('toggleRoutes');
+    btnRoutes.onclick = () => {
+      showRoutes = !showRoutes;
+      btnRoutes.classList.toggle('active', showRoutes);
+      if (showRoutes) {
+        renderAttackRoutes(currentPoints);
+      } else {
+        routeLines.forEach(l => map.removeLayer(l));
+        routeLines = [];
+      }
+    };
+
+    // Toggle Attackers
+    const btnAttackers = document.getElementById('toggleAttackers');
+    btnAttackers.onclick = () => {
+      showAttackers = !showAttackers;
+      btnAttackers.classList.toggle('active', showAttackers);
+      if (showAttackers) {
+        renderAttackerMarkers(currentPoints);
+      } else {
+        attackerMarkers.forEach(m => map.removeLayer(m));
+        attackerMarkers.clear();
+      }
+    };
+
+    // Toggle Target
+    const btnTarget = document.getElementById('toggleTarget');
+    btnTarget.onclick = () => {
+      showTarget = !showTarget;
+      btnTarget.classList.toggle('active', showTarget);
+      renderTargetMarker();
+    };
+
+    // Toggle Heatmap
+    const btnHeatmap = document.getElementById('toggleHeatmap');
+    btnHeatmap.onclick = () => {
+      showHeatmap = !showHeatmap;
+      btnHeatmap.classList.toggle('active', showHeatmap);
+      renderHeatmapLayer();
+    };
+
+    // Toggle Basemap
+    document.getElementById('toggleBasemap').onclick = toggleBasemapEngine;
+
+    // Simulate Attacks Stream button
+    const btnSim = document.getElementById('btnSimulateAttacks');
+    btnSim.onclick = async () => {
+      btnSim.disabled = true;
+      btnSim.innerHTML = `<span class="hn-spinner" style="width:12px; height:12px;"></span> Simulating Vector...`;
+
+      try {
+        const scenarios = ['multi_vector', 'sqli', 'brute_force', 'directory_traversal', 'scanner'];
+        const chosen = scenarios[Math.floor(Math.random() * scenarios.length)];
+        await API.runDemo(chosen, 2);
+        showToast('Attack Simulation Launched', `Fired scenario '${chosen}' across loopback honeypot. Ingestion pipeline is live.`, 'HIGH');
+      } catch (err) {
+        showToast('Simulation Error', err.message, 'CRITICAL');
+      } finally {
+        setTimeout(() => {
+          btnSim.disabled = false;
+          btnSim.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Simulate Attack Stream
+          `;
+          window.loadPointsData();
+        }, 1200);
+      }
+    };
+  }
+
+  function updateTimestamp() {
+    const now = new Date();
+    document.getElementById('lastUpdatedTs').textContent = now.toTimeString().split(' ')[0];
+  }
+
+  // Start initialization
   initMap();
 </script>
 {% endblock %}

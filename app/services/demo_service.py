@@ -167,6 +167,9 @@ def run_scenario_async(scenario: str) -> int:
 
     steps = get_scenario_steps(scenario)
 
+    from flask import current_app
+    app_obj = current_app._get_current_object()
+
     def _worker():
         try:
             logger.info(f"Starting simulated attack scenario '{scenario}' ({len(steps)} steps)")
@@ -174,7 +177,10 @@ def run_scenario_async(scenario: str) -> int:
                 _send_step(step)
                 time.sleep(step.delay_s)
             logger.info(f"Completed simulated attack scenario '{scenario}'")
-            audit_log("demo.run", scenario, "success", {"events_count": len(steps)})
+            with app_obj.app_context():
+                audit_log("demo.run", scenario, "success", {"events_count": len(steps)})
+        except Exception as e:
+            logger.error(f"Error in DemoAttackWorker: {e}")
         finally:
             _DEMO_LOCK.release()
 
