@@ -61,6 +61,8 @@ class EventProcessor:
                     meta["pw_class"] = self._classify_password(raw_pwd)
 
                 ts = datetime.fromisoformat(raw["timestamp"]) if isinstance(raw["timestamp"], str) else raw["timestamp"]
+                if hasattr(ts, "tzinfo") and ts.tzinfo is not None:
+                    ts = ts.astimezone(timezone.utc).replace(tzinfo=None)
 
                 # 3. Stage: Intelligence Enrichment (GeoIP, ASN, VPN, Tor)
                 geo_info = self._enrich_ip(raw["source_ip"])

@@ -100,6 +100,7 @@
     {% endif %}
 
     <form method="POST" action="/auth/mfa">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="text" name="code" class="code-input" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required autofocus autocomplete="one-time-code">
       <button type="submit" class="btn-submit">Authenticate Session &rarr;</button>
     </form>

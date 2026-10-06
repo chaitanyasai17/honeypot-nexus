@@ -27,10 +27,14 @@ def login_view():
         user = User.query.filter_by(username=username).first()
 
         # Check account lockout
-        if user and user.locked_until and user.locked_until > utc_now():
-            audit_log("auth.login.locked", username, "failure", {"reason": "Account locked"})
-            error = "Account is temporarily locked due to failed login attempts. Please try later."
-            return render_template("auth/login.html", error=error, next=next_url)
+        if user and user.locked_until:
+            locked = user.locked_until
+            if locked.tzinfo is not None:
+                locked = locked.astimezone(timezone.utc).replace(tzinfo=None)
+            if locked > utc_now():
+                audit_log("auth.login.locked", username, "failure", {"reason": "Account locked"})
+                error = "Account is temporarily locked due to failed login attempts. Please try later."
+                return render_template("auth/login.html", error=error, next=next_url)
 
         # Validate credentials
         if user and verify_password(user.password_hash, password):

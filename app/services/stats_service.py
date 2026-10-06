@@ -16,7 +16,7 @@ from app.models.models import (
 from app.detection.scoring import score_to_band
 from app.extensions import db
 
-START_TIME = datetime.now(timezone.utc)
+START_TIME = utc_now()
 
 
 def get_kpis() -> Dict[str, Any]:

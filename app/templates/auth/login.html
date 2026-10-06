@@ -91,6 +91,7 @@
     {% endif %}
 
     <form method="POST" action="/auth/login{% if next %}?next={{ next }}{% endif %}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
         <label class="form-label">Operator Username</label>
         <input type="text" name="username" class="form-input" placeholder="admin" required autofocus>

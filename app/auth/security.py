@@ -81,7 +81,10 @@ def get_authenticated_user() -> User | None:
         return None
 
     # Check expiration
-    if admin_sess.expires_at < utc_now():
+    expires = admin_sess.expires_at
+    if expires.tzinfo is not None:
+        expires = expires.astimezone(timezone.utc).replace(tzinfo=None)
+    if expires < utc_now():
         return None
 
     # Update sliding window expiration

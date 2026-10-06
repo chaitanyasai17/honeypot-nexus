@@ -111,6 +111,7 @@
     <div class="secret-key">{{ secret }}</div>
 
     <form method="POST" action="/auth/enroll">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label style="display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; text-align: left;">
         Enter verification code to confirm pairing:
       </label>

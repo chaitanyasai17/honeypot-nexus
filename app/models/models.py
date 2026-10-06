@@ -12,8 +12,8 @@ from app.extensions import db
 
 
 def utc_now():
-    """Returns timezone-aware UTC timestamp."""
-    return datetime.now(timezone.utc)
+    """Returns UTC timestamp without timezone offset for database and SQLite compatibility."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def gen_uuid():
