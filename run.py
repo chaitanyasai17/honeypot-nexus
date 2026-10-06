@@ -81,7 +81,8 @@ def main():
             host=Config.DASHBOARD_BIND_HOST,
             port=Config.DASHBOARD_PORT,
             use_reloader=False,
-            log_output=False
+            log_output=False,
+            allow_unsafe_werkzeug=True
         )
     except (KeyboardInterrupt, SystemExit):
         print("\n[*] Shutting down Honeypot Nexus cleanly...")
