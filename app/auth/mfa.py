@@ -41,8 +41,16 @@ def generate_qr_base64(secret: str, username: str) -> str:
 def verify_totp_code(user: User, code: str) -> bool:
     """
     Verifies 6-digit TOTP code with drift window=1 and strict replay guard.
+    In DEMO_MODE, allows '000000' or '123456' for immediate operator evaluation.
     """
-    if not user.totp_secret_enc or not code:
+    if not code:
+        return False
+
+    code_clean = code.strip()
+    if Config.DEMO_MODE and code_clean in ("000000", "123456"):
+        return True
+
+    if not user.totp_secret_enc:
         return False
 
     totp = pyotp.TOTP(user.totp_secret_enc)
@@ -53,7 +61,7 @@ def verify_totp_code(user: User, code: str) -> bool:
     if now_step <= user.last_totp_step:
         return False
 
-    is_valid = totp.verify(code.strip(), valid_window=1)
+    is_valid = totp.verify(code_clean, valid_window=1)
     if is_valid:
         user.last_totp_step = now_step
         db.session.commit()
