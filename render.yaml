@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: honeypot-nexus
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_ENV
+        value: production
+      - key: ALLOW_NON_LOOPBACK
+        value: "true"
+      - key: DASHBOARD_BIND_HOST
+        value: 0.0.0.0
+      - key: HONEYPOT_BIND_HOST
+        value: 0.0.0.0
+      - key: DEMO_MODE
+        value: "true"
+      - key: GEOIP_PROVIDER
+        value: mock
+      - key: MAP_TILES
+        value: offline
+      - key: APP_TIMEZONE
+        value: Asia/Kolkata
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECRET_KEY
+        generateValue: true
+      - key: EVENTBUS_HMAC_KEY
+        generateValue: true
+      - key: PW_FINGERPRINT_KEY
+        generateValue: true

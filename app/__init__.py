@@ -60,7 +60,7 @@ def create_soc_app(config_class=Config):
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://server.arcgisonline.com https://services.arcgisonline.com https://*.arcgisonline.com https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://api.maptiler.com https://*.maptiler.com; "
             "font-src 'self'; "
-            "connect-src 'self' ws://127.0.0.1:5000 ws://localhost:5000 http://127.0.0.1:5000 https://api.maptiler.com https://*.maptiler.com; "
+            "connect-src 'self' wss: https: ws://127.0.0.1:5000 ws://localhost:5000 http://127.0.0.1:5000 https://api.maptiler.com https://*.maptiler.com; "
             "frame-ancestors 'none'; "
             "base-uri 'none'; "
             "form-action 'self';"

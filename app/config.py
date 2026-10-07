@@ -36,13 +36,15 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Network Binding
-    DASHBOARD_BIND_HOST = os.getenv("DASHBOARD_BIND_HOST", "127.0.0.1")
-    DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "5000"))
-    HONEYPOT_BIND_HOST = os.getenv("HONEYPOT_BIND_HOST", "127.0.0.1")
-    HONEYPOT_PORT = int(os.getenv("HONEYPOT_PORT", "8080"))
-    ALLOW_NON_LOOPBACK = os.getenv("ALLOW_NON_LOOPBACK", "false").lower() in ("true", "1", "yes")
-    TRUST_PROXY_HOPS = int(os.getenv("TRUST_PROXY_HOPS", "0"))
-    PUBLIC_HTTPS = os.getenv("PUBLIC_HTTPS", "false").lower() in ("true", "1", "yes")
+    # Respect cloud platform PORT environment variable (Render, Railway, Fly.io)
+    env_port = os.getenv("PORT")
+    DASHBOARD_BIND_HOST = os.getenv("DASHBOARD_BIND_HOST", "0.0.0.0" if env_port else "127.0.0.1")
+    DASHBOARD_PORT = int(env_port or os.getenv("DASHBOARD_PORT", "5000"))
+    HONEYPOT_BIND_HOST = os.getenv("HONEYPOT_BIND_HOST", "0.0.0.0" if env_port else "127.0.0.1")
+    HONEYPOT_PORT = int(os.getenv("HONEYPOT_PORT", "8080" if not env_port else env_port))
+    ALLOW_NON_LOOPBACK = os.getenv("ALLOW_NON_LOOPBACK", "true" if env_port else "false").lower() in ("true", "1", "yes")
+    TRUST_PROXY_HOPS = int(os.getenv("TRUST_PROXY_HOPS", "1" if env_port else "0"))
+    PUBLIC_HTTPS = os.getenv("PUBLIC_HTTPS", "true" if env_port else "false").lower() in ("true", "1", "yes")
 
     # Session & Security
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")

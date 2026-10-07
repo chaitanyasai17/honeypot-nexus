@@ -17,7 +17,8 @@ class SocketManager {
     }
 
     this.socket = io('/soc', {
-      transports: ['polling', 'websocket'],
+      transports: ['polling'],
+      upgrade: false,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 10000

@@ -13,7 +13,7 @@ from flask_migrate import Migrate
 db = SQLAlchemy()
 socketio = SocketIO(
     async_mode="threading",
-    cors_allowed_origins=["http://127.0.0.1:5000", "http://localhost:5000"]
+    cors_allowed_origins="*"
 )
 limiter = Limiter(
     key_func=get_remote_address,

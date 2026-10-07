@@ -41,6 +41,7 @@
   {% if config.get('DEMO_MODE') %}
   <div class="demo-bar">
     🛡️ Demonstration Environment — SecureCorp is a synthetic organization for research & deception detection.
+    <a href="/dashboard/" style="color:#92400e; font-weight:700; margin-left:12px; text-decoration:underline;">[Open SOC Dashboard &rarr;]</a>
   </div>
   {% endif %}
   <header>
@@ -64,7 +65,11 @@
   </div>
 
   <footer>
-    &copy; 2026 {{ company }} — All rights reserved. Authorized corporate access only.
+    <p>&copy; 2026 {{ company }} — All rights reserved. Authorized corporate access only.</p>
+    <p style="margin-top:6px; font-size:11px;">
+      <a href="/dashboard/" style="color:var(--text-muted); text-decoration:none;">Private SOC Analyst Portal</a> •
+      <a href="/auth/login" style="color:var(--text-muted); text-decoration:none;">Operator Login</a>
+    </p>
   </footer>
 </body>
 </html>

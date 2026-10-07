@@ -50,6 +50,12 @@ def main():
         db.create_all()
         # Seed default configurations
         seed_default_configs()
+        # Seed evaluation administrator idempotently
+        try:
+            from scripts.init_demo_admin import init_demo_admin
+            init_demo_admin()
+        except Exception as e:
+            logger.warning(f"Admin provisioning notice: {e}")
 
     # 3. Create Event Processor and subscribe pipeline to EventBus
     processor = EventProcessor(soc_app, event_bus)
@@ -60,17 +66,37 @@ def main():
     publisher = event_bus.publisher()
     honeypot_app = create_honeypot_app(Config, publisher=publisher)
 
-    # 5. Start Honeypot server in daemon thread
-    hp_thread = threading.Thread(
-        target=start_honeypot_server,
-        args=(honeypot_app, Config.HONEYPOT_BIND_HOST, Config.HONEYPOT_PORT),
-        daemon=True,
-        name="HoneypotServerThread"
-    )
-    hp_thread.start()
+    # 5. Start dedicated Honeypot server if running on distinct port
+    if Config.HONEYPOT_PORT != Config.DASHBOARD_PORT:
+        hp_thread = threading.Thread(
+            target=start_honeypot_server,
+            args=(honeypot_app, Config.HONEYPOT_BIND_HOST, Config.HONEYPOT_PORT),
+            daemon=True,
+            name="HoneypotServerThread"
+        )
+        hp_thread.start()
+        print(f"[*] Public Honeypot online:  http://{Config.HONEYPOT_BIND_HOST}:{Config.HONEYPOT_PORT}")
+    else:
+        print(f"[*] Single-port unified cloud mode: Honeypot & SOC active on port {Config.DASHBOARD_PORT}")
 
-    print(f"[*] Public Honeypot online:  http://{Config.HONEYPOT_BIND_HOST}:{Config.HONEYPOT_PORT}")
-    print(f"[*] Private SOC Dashboard:  http://{Config.DASHBOARD_BIND_HOST}:{Config.DASHBOARD_PORT}")
+    # 6. Apply Unified WSGI Dispatcher to allow seamless single-port & cloud access
+    original_wsgi_app = soc_app.wsgi_app
+
+    def unified_dispatcher(environ, start_response):
+        path = environ.get("PATH_INFO", "")
+        # Route to SOC application
+        if (
+            path.startswith(("/dashboard", "/auth", "/socket.io", "/healthz"))
+            or (path.startswith("/api/") and not path.startswith("/api/v1/"))
+            or (path.startswith("/static/") and not path.startswith("/static/honeypot/"))
+        ):
+            return original_wsgi_app(environ, start_response)
+        # All other paths route to untrusted honeypot deception layer
+        return honeypot_app(environ, start_response)
+
+    soc_app.wsgi_app = unified_dispatcher
+
+    print(f"[*] Private SOC Dashboard:  http://{Config.DASHBOARD_BIND_HOST}:{Config.DASHBOARD_PORT}/dashboard/")
     print(f"[*] System Mode: DEMO_MODE={'ENABLED' if Config.DEMO_MODE else 'DISABLED'}")
     print("=" * 70)
 
