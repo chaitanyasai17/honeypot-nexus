@@ -39,12 +39,18 @@ def create_soc_app(config_class=Config):
     # Register error handlers
     register_error_handlers(app)
 
+    # Register Jinja Timezone Filters (Asia/Kolkata / IST)
+    from app.utils.timezone import format_ist, format_ist_time, format_ist_full, to_utc_iso
+    app.jinja_env.filters["ist"] = format_ist_full
+    app.jinja_env.filters["ist_time"] = format_ist_time
+    app.jinja_env.filters["to_iso"] = to_utc_iso
+
     # Security Headers Hook
     @app.after_request
     def set_soc_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -52,9 +58,9 @@ def create_soc_app(config_class=Config):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https://*.tile.openstreetmap.org; "
+            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://server.arcgisonline.com https://services.arcgisonline.com https://*.arcgisonline.com https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://api.maptiler.com https://*.maptiler.com; "
             "font-src 'self'; "
-            "connect-src 'self' ws://127.0.0.1:5000 ws://localhost:5000 http://127.0.0.1:5000; "
+            "connect-src 'self' ws://127.0.0.1:5000 ws://localhost:5000 http://127.0.0.1:5000 https://api.maptiler.com https://*.maptiler.com; "
             "frame-ancestors 'none'; "
             "base-uri 'none'; "
             "form-action 'self';"

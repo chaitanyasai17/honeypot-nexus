@@ -9,6 +9,7 @@ from flask import request
 from flask_socketio import emit
 from app.extensions import socketio
 from app.logging_config import get_logger
+from app.utils.timezone import to_utc_iso, now_utc
 
 logger = get_logger("app")
 _seq_counter = 0
@@ -25,12 +26,13 @@ def broadcast_pipeline_updates(event_model, session, detections, alerts: list):
     Called by processor after DB transaction commit.
     Emits events in strict order: new_event -> new_attack -> risk_update -> session_update -> new_alert.
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = to_utc_iso(now_utc())
 
     # 1. Compact Event DTO
     event_dto = {
         "event_id": event_model.event_id,
-        "timestamp": event_model.timestamp.isoformat() if hasattr(event_model.timestamp, "isoformat") else str(event_model.timestamp),
+        "timestamp": to_utc_iso(event_model.timestamp),
+        "received_at": to_utc_iso(event_model.received_at),
         "source_ip": event_model.source_ip,
         "endpoint": event_model.endpoint,
         "http_method": event_model.http_method,
@@ -111,7 +113,7 @@ def broadcast_pipeline_updates(event_model, session, detections, alerts: list):
     for alert in alerts:
         alert_dto = {
             "alert_id": alert.alert_id,
-            "timestamp": alert.timestamp.isoformat() if hasattr(alert.timestamp, "isoformat") else str(alert.timestamp),
+            "timestamp": to_utc_iso(alert.timestamp),
             "severity": alert.severity,
             "title": alert.title,
             "description": alert.description,

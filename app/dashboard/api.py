@@ -29,6 +29,7 @@ from app.services.audit_service import audit_log
 from app.detection.engine import get_detection_engine
 from app.extensions import db, limiter
 from app.errors import ApiError
+from app.utils.timezone import to_utc_iso, now_utc, to_ist, format_ist, format_ist_time
 
 api_soc_bp = Blueprint("soc_api", __name__, url_prefix="/api")
 
@@ -84,7 +85,7 @@ def list_events():
     data = [
         {
             "event_id": e.event_id,
-            "timestamp": e.timestamp.isoformat(),
+            "timestamp": to_utc_iso(e.timestamp),
             "source_ip": e.source_ip,
             "endpoint": e.endpoint,
             "http_method": e.http_method,
@@ -143,7 +144,8 @@ def get_event(event_id):
 
     return jsonify({
         "event_id": ev.event_id,
-        "timestamp": ev.timestamp.isoformat(),
+        "timestamp": to_utc_iso(ev.timestamp),
+        "received_at": to_utc_iso(ev.received_at),
         "source_ip": ev.source_ip,
         "source_port": ev.source_port,
         "destination": ev.destination,
@@ -202,7 +204,7 @@ def list_alerts():
         "data": [
             {
                 "alert_id": a.alert_id,
-                "timestamp": a.timestamp.isoformat(),
+                "timestamp": to_utc_iso(a.timestamp),
                 "severity": a.severity,
                 "title": a.title,
                 "description": a.description,
@@ -214,7 +216,7 @@ def list_alerts():
                 "status": a.status,
                 "occurrences": a.occurrences,
                 "reasons": a.reasons_json,
-                "last_occurrence_at": a.last_occurrence_at.isoformat() if a.last_occurrence_at else None
+                "last_occurrence_at": to_utc_iso(a.last_occurrence_at) if a.last_occurrence_at else None
             }
             for a in alerts
         ],
@@ -274,8 +276,8 @@ def list_attackers():
                 "source_ip": p.source_ip,
                 "country": p.geo_record.country if p.geo_record else "Unknown",
                 "city": p.geo_record.city if p.geo_record else "Unknown",
-                "first_seen": p.first_seen.isoformat(),
-                "last_seen": p.last_seen.isoformat(),
+                "first_seen": to_utc_iso(p.first_seen),
+                "last_seen": to_utc_iso(p.last_seen),
                 "total_sessions": p.total_sessions,
                 "total_events": p.total_events,
                 "max_risk": p.max_risk,
@@ -312,8 +314,8 @@ def get_attacker(ip_or_id):
             "city": geo.city if geo else "Unknown",
             "isp": geo.isp if geo else "Unknown",
             "asn": geo.asn if geo else "Unknown",
-            "first_seen": profile.first_seen.isoformat(),
-            "last_seen": profile.last_seen.isoformat(),
+            "first_seen": to_utc_iso(profile.first_seen),
+            "last_seen": to_utc_iso(profile.last_seen),
             "total_sessions": profile.total_sessions,
             "total_events": profile.total_events,
             "max_risk": profile.max_risk,
@@ -326,7 +328,7 @@ def get_attacker(ip_or_id):
         "recent_events": [
             {
                 "event_id": e.event_id,
-                "timestamp": e.timestamp.isoformat(),
+                "timestamp": to_utc_iso(e.timestamp),
                 "endpoint": e.endpoint,
                 "surface": e.surface,
                 "attack_type": e.attack_type,
@@ -348,8 +350,8 @@ def list_sessions():
             {
                 "id": s.id,
                 "source_ip": s.source_ip,
-                "first_seen": s.first_seen.isoformat(),
-                "last_seen": s.last_seen.isoformat(),
+                "first_seen": to_utc_iso(s.first_seen),
+                "last_seen": to_utc_iso(s.last_seen),
                 "duration_seconds": int((s.last_seen - s.first_seen).total_seconds()),
                 "event_count": s.event_count,
                 "risk_score": s.risk_score,
@@ -376,8 +378,8 @@ def get_session(session_id):
         "session": {
             "id": sess.id,
             "source_ip": sess.source_ip,
-            "first_seen": sess.first_seen.isoformat(),
-            "last_seen": sess.last_seen.isoformat(),
+            "first_seen": to_utc_iso(sess.first_seen),
+            "last_seen": to_utc_iso(sess.last_seen),
             "duration_seconds": int((sess.last_seen - sess.first_seen).total_seconds()),
             "event_count": sess.event_count,
             "risk_score": sess.risk_score,
@@ -390,7 +392,7 @@ def get_session(session_id):
         "timeline": [
             {
                 "event_id": e.event_id,
-                "timestamp": e.timestamp.isoformat(),
+                "timestamp": to_utc_iso(e.timestamp),
                 "endpoint": e.endpoint,
                 "http_method": e.http_method,
                 "surface": e.surface,
@@ -480,23 +482,24 @@ def get_map_points():
             "tor": p.tor_detected,
             "engagement": p.engagement_score,
             "session_id": sess_id,
-            "first_seen": p.created_at.strftime("%H:%M:%S") if p.created_at else "--:--:--",
-            "last_activity": p.updated_at.strftime("%H:%M:%S") if p.updated_at else "--:--:--",
+            "first_seen": to_utc_iso(p.created_at) if p.created_at else None,
+            "last_activity": to_utc_iso(p.updated_at) if p.updated_at else None,
             "status": "ACTIVE" if (latest_sess and latest_sess.status == "active") else "MONITORED",
             "approx": True
         })
 
     # When database points are minimal, supplement with realistic threat nodes
+    now = now_utc()
     if len(points) < 6:
         synthetic_demo_nodes = [
-            {"ip": "192.0.2.14", "lat": 37.7749, "lng": -122.4194, "country": "United States", "city": "San Francisco", "isp": "Silicon Cloud Systems", "asn": "AS64496", "attack_count": 34, "max_risk": 91, "severity": "CRITICAL", "top_attack": "SQL Injection", "vpn": False, "tor": False, "engagement": 84, "session_id": "SES-9821A", "first_seen": "19:42:10", "last_activity": "20:15:32", "status": "ACTIVE", "approx": True},
-            {"ip": "192.0.2.35", "lat": 50.1109, "lng": 8.6821, "country": "Germany", "city": "Frankfurt", "isp": "EuroHost GmbH", "asn": "AS64498", "attack_count": 28, "max_risk": 82, "severity": "CRITICAL", "top_attack": "Directory Traversal", "vpn": False, "tor": False, "engagement": 76, "session_id": "SES-DE410", "first_seen": "19:45:00", "last_activity": "20:18:14", "status": "ACTIVE", "approx": True},
-            {"ip": "198.51.100.18", "lat": 1.3521, "lng": 103.8198, "country": "Singapore", "city": "Singapore", "isp": "SingaTech Fiber", "asn": "AS64502", "attack_count": 19, "max_risk": 74, "severity": "HIGH", "top_attack": "Brute Force", "vpn": False, "tor": False, "engagement": 65, "session_id": "SES-SG091", "first_seen": "19:50:22", "last_activity": "20:20:05", "status": "ACTIVE", "approx": True},
-            {"ip": "198.51.100.5", "lat": 52.3676, "lng": 4.9041, "country": "Netherlands", "city": "Amsterdam", "isp": "Delta Datacenters B.V.", "asn": "AS64501", "attack_count": 42, "max_risk": 88, "severity": "CRITICAL", "top_attack": "Fake Shell Recon", "vpn": True, "tor": True, "engagement": 92, "session_id": "SES-NL772", "first_seen": "19:30:11", "last_activity": "20:21:40", "status": "ACTIVE", "approx": True},
-            {"ip": "198.51.100.34", "lat": 35.6762, "lng": 139.6503, "country": "Japan", "city": "Tokyo", "isp": "Nippon Packet Route", "asn": "AS64503", "attack_count": 15, "max_risk": 55, "severity": "ELEVATED", "top_attack": "API Enumeration", "vpn": False, "tor": False, "engagement": 48, "session_id": "SES-JP334", "first_seen": "20:01:15", "last_activity": "20:22:11", "status": "ACTIVE", "approx": True},
-            {"ip": "203.0.113.72", "lat": 12.9716, "lng": 77.5946, "country": "India", "city": "Bengaluru", "isp": "Bharat Packet Transit", "asn": "AS64505", "attack_count": 22, "max_risk": 68, "severity": "HIGH", "top_attack": "Credential Stuffing", "vpn": False, "tor": False, "engagement": 58, "session_id": "SES-IN512", "first_seen": "20:05:44", "last_activity": "20:23:09", "status": "ACTIVE", "approx": True},
-            {"ip": "192.0.2.68", "lat": 51.5074, "lng": -0.1278, "country": "United Kingdom", "city": "London", "isp": "Thames Transit Ltd", "asn": "AS64499", "attack_count": 17, "max_risk": 62, "severity": "HIGH", "top_attack": "Scanner Detection", "vpn": False, "tor": False, "engagement": 52, "session_id": "SES-UK118", "first_seen": "19:58:30", "last_activity": "20:23:45", "status": "ACTIVE", "approx": True},
-            {"ip": "203.0.113.38", "lat": -23.5505, "lng": -46.6333, "country": "Brazil", "city": "São Paulo", "isp": "Paulista Fiber Net", "asn": "AS64504", "attack_count": 11, "max_risk": 48, "severity": "ELEVATED", "top_attack": "Sensitive File Lure", "vpn": False, "tor": False, "engagement": 41, "session_id": "SES-BR809", "first_seen": "20:10:02", "last_activity": "20:24:00", "status": "ACTIVE", "approx": True}
+            {"ip": "192.0.2.14", "lat": 37.7749, "lng": -122.4194, "country": "United States", "city": "San Francisco", "isp": "Silicon Cloud Systems", "asn": "AS64496", "attack_count": 34, "max_risk": 91, "severity": "CRITICAL", "top_attack": "SQL Injection", "vpn": False, "tor": False, "engagement": 84, "session_id": "SES-9821A", "first_seen": to_utc_iso(now - timedelta(minutes=45)), "last_activity": to_utc_iso(now - timedelta(minutes=4)), "status": "ACTIVE", "approx": True},
+            {"ip": "192.0.2.35", "lat": 50.1109, "lng": 8.6821, "country": "Germany", "city": "Frankfurt", "isp": "EuroHost GmbH", "asn": "AS64498", "attack_count": 28, "max_risk": 82, "severity": "CRITICAL", "top_attack": "Directory Traversal", "vpn": False, "tor": False, "engagement": 76, "session_id": "SES-DE410", "first_seen": to_utc_iso(now - timedelta(minutes=40)), "last_activity": to_utc_iso(now - timedelta(minutes=2)), "status": "ACTIVE", "approx": True},
+            {"ip": "198.51.100.18", "lat": 1.3521, "lng": 103.8198, "country": "Singapore", "city": "Singapore", "isp": "SingaTech Fiber", "asn": "AS64502", "attack_count": 19, "max_risk": 74, "severity": "HIGH", "top_attack": "Brute Force", "vpn": False, "tor": False, "engagement": 65, "session_id": "SES-SG091", "first_seen": to_utc_iso(now - timedelta(minutes=35)), "last_activity": to_utc_iso(now - timedelta(minutes=1)), "status": "ACTIVE", "approx": True},
+            {"ip": "198.51.100.5", "lat": 52.3676, "lng": 4.9041, "country": "Netherlands", "city": "Amsterdam", "isp": "Delta Datacenters B.V.", "asn": "AS64501", "attack_count": 42, "max_risk": 88, "severity": "CRITICAL", "top_attack": "Fake Shell Recon", "vpn": True, "tor": True, "engagement": 92, "session_id": "SES-NL772", "first_seen": to_utc_iso(now - timedelta(minutes=50)), "last_activity": to_utc_iso(now - timedelta(seconds=45)), "status": "ACTIVE", "approx": True},
+            {"ip": "198.51.100.34", "lat": 35.6762, "lng": 139.6503, "country": "Japan", "city": "Tokyo", "isp": "Nippon Packet Route", "asn": "AS64503", "attack_count": 15, "max_risk": 55, "severity": "ELEVATED", "top_attack": "API Enumeration", "vpn": False, "tor": False, "engagement": 48, "session_id": "SES-JP334", "first_seen": to_utc_iso(now - timedelta(minutes=25)), "last_activity": to_utc_iso(now - timedelta(seconds=30)), "status": "ACTIVE", "approx": True},
+            {"ip": "203.0.113.72", "lat": 12.9716, "lng": 77.5946, "country": "India", "city": "Bengaluru", "isp": "Bharat Packet Transit", "asn": "AS64505", "attack_count": 22, "max_risk": 68, "severity": "HIGH", "top_attack": "Credential Stuffing", "vpn": False, "tor": False, "engagement": 58, "session_id": "SES-IN512", "first_seen": to_utc_iso(now - timedelta(minutes=20)), "last_activity": to_utc_iso(now - timedelta(seconds=20)), "status": "ACTIVE", "approx": True},
+            {"ip": "192.0.2.68", "lat": 51.5074, "lng": -0.1278, "country": "United Kingdom", "city": "London", "isp": "Thames Transit Ltd", "asn": "AS64499", "attack_count": 17, "max_risk": 62, "severity": "HIGH", "top_attack": "Scanner Detection", "vpn": False, "tor": False, "engagement": 52, "session_id": "SES-UK118", "first_seen": to_utc_iso(now - timedelta(minutes=28)), "last_activity": to_utc_iso(now - timedelta(seconds=15)), "status": "ACTIVE", "approx": True},
+            {"ip": "203.0.113.38", "lat": -23.5505, "lng": -46.6333, "country": "Brazil", "city": "São Paulo", "isp": "Paulista Fiber Net", "asn": "AS64504", "attack_count": 11, "max_risk": 48, "severity": "ELEVATED", "top_attack": "Sensitive File Lure", "vpn": False, "tor": False, "engagement": 41, "session_id": "SES-BR809", "first_seen": to_utc_iso(now - timedelta(minutes=15)), "last_activity": to_utc_iso(now - timedelta(seconds=10)), "status": "ACTIVE", "approx": True}
         ]
         existing_ips = {p["ip"] for p in points}
         for node in synthetic_demo_nodes:
@@ -559,7 +562,7 @@ def honeypot_status():
             "status": "Operational",
             "events": count,
             "attacks": attacks,
-            "last_activity": last_ev.timestamp.isoformat() if last_ev else None
+            "last_activity": to_utc_iso(last_ev.timestamp) if last_ev else None
         })
 
     return jsonify({"surfaces": cards})
@@ -579,7 +582,7 @@ def list_audit():
         "data": [
             {
                 "id": l.id,
-                "timestamp": l.timestamp.isoformat(),
+                "timestamp": to_utc_iso(l.timestamp),
                 "username": l.username,
                 "action": l.action,
                 "target": l.target,

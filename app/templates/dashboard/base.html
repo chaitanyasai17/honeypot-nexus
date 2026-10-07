@@ -168,18 +168,26 @@
   <!-- Global JavaScript & WebSocket Connection -->
   <script type="module">
     import { SocketBus } from "{{ url_for('static', filename='js/core/socket.js') }}";
-    import { openDrawer, closeDrawer, showToast, esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
+    import { openDrawer, closeDrawer, showToast, esc, openEventDetail } from "{{ url_for('static', filename='js/core/ui.js') }}";
     import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
 
     window.closeDrawer = closeDrawer;
     window.openDrawer = openDrawer;
+    window.openEventDetail = openEventDetail;
 
-    // Clock
+    // Top Application Clock (Requirement 5: Asia/Kolkata IST)
+    const headerClockFormatter = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    });
+
     function updateClock() {
       const el = document.getElementById('hnClock');
       if (el) {
-        const now = new Date();
-        el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
+        el.textContent = headerClockFormatter.format(new Date()) + ' IST';
       }
     }
     setInterval(updateClock, 1000);

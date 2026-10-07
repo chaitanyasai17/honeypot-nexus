@@ -68,7 +68,7 @@
         <table class="hn-table">
           <thead>
             <tr>
-              <th>Time</th>
+              <th>Time (IST)</th>
               <th>Source IP</th>
               <th>Attack Type</th>
               <th>Endpoint</th>
@@ -173,7 +173,7 @@
         <table class="hn-table">
           <thead>
             <tr>
-              <th>Time</th>
+              <th>Time (IST)</th>
               <th>Severity</th>
               <th>Title</th>
               <th>Source IP</th>
@@ -193,7 +193,8 @@
   import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
   import { SocketBus } from "{{ url_for('static', filename='js/core/socket.js') }}";
   import { formatDate, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
-  import { esc, openDrawer } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { esc, openEventDetail } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  window.openEventDetail = openEventDetail;
 
   let distChart = null;
   let timelineChart = null;
@@ -426,49 +427,6 @@
       `).join('');
     } catch (e) {}
   }
-
-  window.openEventDetail = async function(id) {
-    try {
-      const ev = await API.getEventById(id);
-      const content = `
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>${formatSeverityBadge(ev.severity)}</div>
-            <div class="mono" style="font-size:12px; color:var(--hn-text-faint);">${ev.event_id}</div>
-          </div>
-
-          <div style="background:var(--hn-bg-2); padding:12px; border-radius:6px; border:1px solid var(--hn-border);">
-            <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase;">Request Target</div>
-            <div class="mono" style="font-size:14px; margin-top:4px;"><strong>${esc(ev.http_method)}</strong> ${esc(ev.endpoint)}</div>
-            <div style="font-size:12px; color:var(--hn-text-dim); margin-top:4px;">Surface: ${esc(ev.surface)} • Event Type: ${esc(ev.event_type)}</div>
-          </div>
-
-          <div>
-            <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase; margin-bottom:6px;">Captured Payload</div>
-            <div class="hn-code-block">${esc(ev.payload || '(None)')}</div>
-          </div>
-
-          <div>
-            <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase; margin-bottom:6px;">Detection Rules Triggered</div>
-            ${ev.detections.length ? ev.detections.map(d => `
-              <div style="background:rgba(239,70,85,0.08); border:1px solid rgba(239,70,85,0.2); padding:10px; border-radius:6px; margin-bottom:8px;">
-                <div style="font-weight:700; font-size:13px; color:var(--hn-critical);">${esc(d.rule_id)}: ${esc(d.attack_type)} (+${d.points} pts)</div>
-                <div style="font-size:12px; color:var(--hn-text-dim); margin-top:2px;">${esc(d.reason)}</div>
-              </div>
-            `).join('') : '<div style="font-size:12px; color:var(--hn-text-faint);">No threat rules fired on this request.</div>'}
-          </div>
-
-          <div style="display:flex; gap:10px; margin-top:12px;">
-            <a href="/dashboard/sessions/${encodeURIComponent(ev.session_summary ? ev.session_summary.session_id : '')}" class="hn-btn hn-btn-secondary hn-btn-sm" style="flex:1;">View Session</a>
-            <a href="/dashboard/attackers/${encodeURIComponent(ev.source_ip)}" class="hn-btn hn-btn-secondary hn-btn-sm" style="flex:1;">Attacker Profile</a>
-          </div>
-        </div>
-      `;
-      openDrawer('Telemetry Event Inspection', content);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   // Real-time updates via SocketIO
   SocketBus.on('new_event', (eventDto) => {

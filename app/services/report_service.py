@@ -14,6 +14,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from app.models.models import HoneypotEventModel, AttackerProfile, Alert
 from app.services.stats_service import get_kpis, get_threat_pulse, get_attack_distribution
 from app.services.audit_service import audit_log
+from app.utils.timezone import to_utc_iso, now_utc, format_ist_full, format_ist_time
 
 
 def sanitize_csv_cell(val: str) -> str:
@@ -43,7 +44,7 @@ def generate_events_csv(filters: dict = None) -> str:
     for ev in events:
         writer.writerow([
             sanitize_csv_cell(ev.event_id),
-            sanitize_csv_cell(ev.timestamp.isoformat()),
+            sanitize_csv_cell(to_utc_iso(ev.timestamp)),
             sanitize_csv_cell(ev.source_ip),
             sanitize_csv_cell(ev.session_id),
             sanitize_csv_cell(ev.attack_type),
@@ -82,8 +83,8 @@ def generate_attackers_csv() -> str:
             sanitize_csv_cell(geo.city if geo else "Unknown"),
             sanitize_csv_cell(geo.isp if geo else "Unknown"),
             sanitize_csv_cell(geo.asn if geo else "None"),
-            sanitize_csv_cell(p.first_seen.isoformat()),
-            sanitize_csv_cell(p.last_seen.isoformat()),
+            sanitize_csv_cell(to_utc_iso(p.first_seen)),
+            sanitize_csv_cell(to_utc_iso(p.last_seen)),
             sanitize_csv_cell(p.total_sessions),
             sanitize_csv_cell(p.total_events),
             sanitize_csv_cell(p.top_attack_type),
@@ -120,7 +121,7 @@ def generate_pdf_report() -> bytes:
     # Title & Metadata
     story.append(Paragraph("HONEYPOT NEXUS — SOC THREAT INTELLIGENCE REPORT", title_style))
     story.append(Spacer(1, 4))
-    story.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} • Classification: CONFIDENTIAL", body_style))
+    story.append(Paragraph(f"Generated: {format_ist_full(now_utc())} • Classification: CONFIDENTIAL", body_style))
     story.append(Spacer(1, 14))
 
     # Executive Threat Pulse Summary
@@ -181,11 +182,11 @@ def generate_pdf_report() -> bytes:
     # Critical Alerts
     story.append(Paragraph("4. Recent High & Critical Incident Alerts", h2_style))
     alerts = Alert.query.order_by(Alert.timestamp.desc()).limit(8).all()
-    al_data = [["Timestamp (UTC)", "Severity", "Incident Title", "Source IP"]]
+    al_data = [["Timestamp (IST)", "Severity", "Incident Title", "Source IP"]]
     if alerts:
         for al in alerts:
             al_data.append([
-                al.timestamp.strftime("%H:%M:%S"),
+                format_ist_time(al.timestamp),
                 al.severity,
                 al.title[:35],
                 al.source_ip

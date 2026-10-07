@@ -818,7 +818,7 @@
 <script type="module">
   import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
   import { esc, showToast } from "{{ url_for('static', filename='js/core/ui.js') }}";
-  import { formatRiskMeter, formatSeverityBadge } from "{{ url_for('static', filename='js/core/format.js') }}";
+  import { formatTime, formatRiskMeter, formatSeverityBadge } from "{{ url_for('static', filename='js/core/format.js') }}";
   import { SocketBus } from "{{ url_for('static', filename='js/core/socket.js') }}";
 
   // -------------------------------------------------------------------------
@@ -848,43 +848,60 @@
 
   const LOCAL_GEOJSON_PATH = "{{ url_for('static', filename='vendor/world-countries.json') }}";
 
-  // Verified, reliable tile layer providers tested with HTTP 200 responses
+  const MAPTILER_KEY = "{{ maptiler_key|default('') }}";
+
+  // Base Map Layer Providers
+  // Supports MapTiler (if key provided) and public high-res GIS tiles (ESRI World Imagery / Street / Topo & Carto)
   const BASE_PROVIDERS = {
     cyber: {
       name: 'Cyber Dark',
-      type: 'vector'
+      type: 'cyber'
     },
     street: {
       name: 'World Street Map',
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      type: 'tile',
+      url: MAPTILER_KEY 
+        ? `https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
       options: {
-        maxZoom: 8,
-        attribution: '&copy; Esri &mdash; Street Map'
+        maxZoom: 18,
+        attribution: MAPTILER_KEY ? '&copy; MapTiler &copy; OpenStreetMap' : '&copy; Esri &mdash; Street Map'
       }
     },
     satellite: {
       name: 'Satellite / Aerial Imagery',
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      type: 'tile',
+      url: MAPTILER_KEY 
+        ? `https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       options: {
-        maxZoom: 8,
-        attribution: '&copy; Esri &mdash; World Imagery'
+        maxZoom: 18,
+        attribution: MAPTILER_KEY ? '&copy; MapTiler &copy; OpenStreetMap' : '&copy; Esri &mdash; World Imagery'
       }
     },
     hybrid: {
       name: 'Hybrid (Satellite + Labels)',
-      base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      labels: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      type: 'hybrid',
+      base: MAPTILER_KEY
+        ? `https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      labels: MAPTILER_KEY
+        ? null
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
       options: {
-        maxZoom: 8,
-        attribution: '&copy; Esri &mdash; Imagery with Labels'
+        maxZoom: 18,
+        attribution: MAPTILER_KEY ? '&copy; MapTiler &copy; OpenStreetMap' : '&copy; Esri &mdash; Imagery &amp; Boundaries'
       }
     },
     terrain: {
       name: 'Topographic Terrain',
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+      type: 'tile',
+      url: MAPTILER_KEY
+        ? `https://api.maptiler.com/maps/topo-v2/256/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
       options: {
-        maxZoom: 8,
-        attribution: '&copy; Esri &mdash; Topographic'
+        maxZoom: 18,
+        attribution: MAPTILER_KEY ? '&copy; MapTiler &copy; OpenStreetMap' : '&copy; Esri &mdash; Topographic'
       }
     }
   };
@@ -896,10 +913,10 @@
     map = L.map('fullAttackMap', {
       zoomControl: false,
       attributionControl: true,
-      minZoom: 1.8,
-      maxZoom: 8,
+      minZoom: 2,
+      maxZoom: 18,
       worldCopyJump: true
-    }).setView([26, 10], 2.2);
+    }).setView([26, 10], 2.4);
 
     // Setup map navigation and feature toggle controls
     setupNavigationAndToggles();
@@ -955,82 +972,68 @@
     // Mount selected base layer
     try {
       if (styleKey === 'cyber') {
-        // Mode 1: Cyber Dark (100% offline local vector map + optional Carto Dark)
+        // Mode 1: Cyber Dark (100% offline local vector map + Carto Dark)
         await loadVectorWorldMap();
 
         cartoDarkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
           subdomains: 'abcd',
-          maxZoom: 8,
+          maxZoom: 18,
           attribution: '&copy; CartoDB &copy; OpenStreetMap'
-        });
-
-        cartoDarkTileLayer.on('tileerror', function() {
-          if (cartoDarkTileLayer && map.hasLayer(cartoDarkTileLayer)) {
-            map.removeLayer(cartoDarkTileLayer);
-            cartoDarkTileLayer = null;
-          }
-          document.getElementById('mapEngineStatus').textContent = 'Base: Cyber Dark (100% Offline Vector)';
         });
 
         cartoDarkTileLayer.addTo(map);
         currentBaseLayer = cartoDarkTileLayer;
-        // Ensure vectorLayer is on top of cartoDarkTileLayer
+
         if (vectorLayer && !map.hasLayer(vectorLayer)) {
           vectorLayer.addTo(map);
         }
         document.getElementById('mapEngineStatus').textContent = 'Base: Cyber Dark SOC Mode';
 
       } else if (styleKey === 'street') {
-        // Mode 2: Street Map
+        // Mode 2: Street Map (Real roads, cities, boundaries)
         const streetLayer = L.tileLayer(BASE_PROVIDERS.street.url, BASE_PROVIDERS.street.options);
-        streetLayer.on('tileerror', () => handleTileFailure('Street'));
         streetLayer.addTo(map);
         currentBaseLayer = streetLayer;
         document.getElementById('mapEngineStatus').textContent = 'Base: World Street Map';
 
       } else if (styleKey === 'satellite') {
-        // Mode 3: Satellite / Aerial
+        // Mode 3: Satellite / Aerial (Real photographic imagery)
         const satLayer = L.tileLayer(BASE_PROVIDERS.satellite.url, BASE_PROVIDERS.satellite.options);
-        satLayer.on('tileerror', () => handleTileFailure('Satellite'));
         satLayer.addTo(map);
         currentBaseLayer = satLayer;
         document.getElementById('mapEngineStatus').textContent = 'Base: Satellite / Aerial Imagery';
 
       } else if (styleKey === 'hybrid') {
-        // Mode 4: Hybrid (Satellite + Place Labels)
-        const satBase = L.tileLayer(BASE_PROVIDERS.hybrid.base, { maxZoom: 8 });
-        const satLabels = L.tileLayer(BASE_PROVIDERS.hybrid.labels, { maxZoom: 8 });
-        const hybridGroup = L.layerGroup([satBase, satLabels]);
-
-        satBase.on('tileerror', () => handleTileFailure('Hybrid'));
-        hybridGroup.addTo(map);
-        currentBaseLayer = hybridGroup;
+        // Mode 4: Hybrid (Satellite imagery + Place/road labels)
+        if (BASE_PROVIDERS.hybrid.labels) {
+          const satBase = L.tileLayer(BASE_PROVIDERS.hybrid.base, BASE_PROVIDERS.hybrid.options);
+          const satLabels = L.tileLayer(BASE_PROVIDERS.hybrid.labels, { maxZoom: 18 });
+          const hybridGroup = L.layerGroup([satBase, satLabels]);
+          hybridGroup.addTo(map);
+          currentBaseLayer = hybridGroup;
+        } else {
+          const hybridLayer = L.tileLayer(BASE_PROVIDERS.hybrid.base, BASE_PROVIDERS.hybrid.options);
+          hybridLayer.addTo(map);
+          currentBaseLayer = hybridLayer;
+        }
         document.getElementById('mapEngineStatus').textContent = 'Base: Hybrid (Satellite + Labels)';
 
       } else if (styleKey === 'terrain') {
         // Mode 5: Topographic Terrain
         const topoLayer = L.tileLayer(BASE_PROVIDERS.terrain.url, BASE_PROVIDERS.terrain.options);
-        topoLayer.on('tileerror', () => handleTileFailure('Terrain'));
         topoLayer.addTo(map);
         currentBaseLayer = topoLayer;
         document.getElementById('mapEngineStatus').textContent = 'Base: Topographic Terrain';
       }
 
     } catch (err) {
-      console.warn('Map style switch fallback:', err);
-      handleTileFailure(BASE_PROVIDERS[styleKey].name);
+      console.warn('Map style switch error:', err);
     }
 
     // Re-verify that overlays are on top
     if (showRoutes && routeLines.length) {
       routeLines.forEach(l => l.bringToFront());
     }
-  }
-
-  function handleTileFailure(providerName) {
-    console.warn(`Layer ${providerName} unavailable; falling back to Cyber Dark (100% Offline Vector).`);
-    showToast('Tile Source Notice', `${providerName} imagery unavailable; switched safely to Cyber Dark.`, 'NORMAL');
-    switchMapStyle('cyber');
   }
 
   // -------------------------------------------------------------------------
@@ -1248,12 +1251,12 @@
 
           <div class="hn-popup-item">
             <span class="label">First Seen</span>
-            <span class="val mono">${esc(p.first_seen || '--:--:--')}</span>
+            <span class="val mono">${formatTime(p.first_seen)}</span>
           </div>
 
           <div class="hn-popup-item">
             <span class="label">Last Activity</span>
-            <span class="val mono">${esc(p.last_activity || '--:--:--')}</span>
+            <span class="val mono">${formatTime(p.last_activity)}</span>
           </div>
         </div>
 
@@ -1411,7 +1414,7 @@
 
         <div class="hn-feed-row-bot">
           <span>${p.attack_count} events recorded</span>
-          <span class="mono">${esc(p.last_activity || '--:--:--')}</span>
+          <span class="mono">${formatTime(p.last_activity)}</span>
         </div>
       `;
 
@@ -1469,7 +1472,7 @@
     if (existing) {
       existing.attack_count += 1;
       existing.max_risk = Math.max(existing.max_risk, evt.risk_score || 0);
-      existing.last_activity = new Date().toTimeString().split(' ')[0];
+      existing.last_activity = evt.timestamp || new Date().toISOString();
       if (evt.attack_type && evt.attack_type !== 'NONE') {
         existing.top_attack = evt.attack_type;
       }
@@ -1490,8 +1493,8 @@
         tor: evt.tor_detected || false,
         engagement: evt.engagement_score || 40,
         session_id: evt.session_id || "SES-LIVE",
-        first_seen: new Date().toTimeString().split(' ')[0],
-        last_activity: new Date().toTimeString().split(' ')[0],
+        first_seen: evt.timestamp || new Date().toISOString(),
+        last_activity: evt.timestamp || new Date().toISOString(),
         status: "ACTIVE"
       };
       currentPoints.unshift(newPoint);
@@ -1520,16 +1523,24 @@
   function setupNavigationAndToggles() {
     document.getElementById('btnZoomIn').onclick = () => map.zoomIn();
     document.getElementById('btnZoomOut').onclick = () => map.zoomOut();
-    document.getElementById('btnResetView').onclick = () => map.setView([26, 10], 2.2);
+    document.getElementById('btnResetView').onclick = () => map.setView([26, 10], 2.4);
 
     document.getElementById('btnFullscreen').onclick = () => {
       const container = document.querySelector('.hn-map-canvas-container');
       if (!document.fullscreenElement) {
-        container.requestFullscreen().catch(err => alert("Fullscreen error: " + err.message));
+        container.requestFullscreen().then(() => {
+          setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+        }).catch(err => alert("Fullscreen error: " + err.message));
       } else {
-        document.exitFullscreen();
+        document.exitFullscreen().then(() => {
+          setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+        });
       }
     };
+
+    document.addEventListener('fullscreenchange', () => {
+      setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+    });
 
     // Toggle Attack Routes
     const btnRoutes = document.getElementById('toggleRoutes');
@@ -1600,8 +1611,7 @@
   }
 
   function updateTimestamp() {
-    const now = new Date();
-    document.getElementById('lastUpdatedTs').textContent = now.toTimeString().split(' ')[0];
+    document.getElementById('lastUpdatedTs').textContent = formatTime(new Date());
   }
 
   // Start initialization

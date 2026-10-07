@@ -27,7 +27,12 @@ def live_attacks():
 @dashboard_bp.route("/map")
 @login_required
 def attack_map():
-    return render_template("dashboard/map.html", active_page="map")
+    from app.config import Config
+    return render_template(
+        "dashboard/map.html",
+        active_page="map",
+        maptiler_key=Config.MAPTILER_API_KEY
+    )
 
 
 @dashboard_bp.route("/attackers")

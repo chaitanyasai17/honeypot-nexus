@@ -15,6 +15,7 @@ from app.models.models import (
 )
 from app.detection.scoring import score_to_band
 from app.extensions import db
+from app.utils.timezone import to_ist
 
 START_TIME = utc_now()
 
@@ -104,7 +105,7 @@ def get_attack_timeline(minutes: int = 60) -> List[Dict[str, Any]]:
 
     buckets: Dict[str, dict] = {}
     for ev in events:
-        minute_str = ev.timestamp.strftime("%H:%M")
+        minute_str = to_ist(ev.timestamp).strftime("%H:%M")
         if minute_str not in buckets:
             buckets[minute_str] = {
                 "t": minute_str,

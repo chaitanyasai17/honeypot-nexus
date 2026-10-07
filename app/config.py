@@ -61,6 +61,7 @@ class Config:
     LAB_LAT = float(os.getenv("LAB_LAT", "13.0827"))
     LAB_LON = float(os.getenv("LAB_LON", "80.2707"))
     MAP_TILES = os.getenv("MAP_TILES", "offline")
+    MAPTILER_API_KEY = os.getenv("MAPTILER_API_KEY", "")
 
     # EventBus Pipeline
     EVENTBUS_MAX_QUEUE = int(os.getenv("EVENTBUS_MAX_QUEUE", "5000"))
@@ -73,6 +74,7 @@ class Config:
     DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() in ("true", "1", "yes")
     ML_ADVISORY = os.getenv("ML_ADVISORY", "false").lower() in ("true", "1", "yes")
     REPORT_TEAM_LINE = os.getenv("REPORT_TEAM_LINE", "CSE (Cyber Security) Mini Project")
+    APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Asia/Kolkata")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
     @classmethod
