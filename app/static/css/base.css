@@ -8,6 +8,8 @@
 
 html, body {
   background-color: var(--hn-bg-0);
+  background-image: radial-gradient(ellipse at 80% 0%, rgba(255, 87, 34, 0.07) 0%, transparent 55%),
+                    radial-gradient(ellipse at 20% 100%, rgba(255, 69, 69, 0.04) 0%, transparent 50%);
   color: var(--hn-text);
   font-family: var(--hn-font);
   font-size: var(--hn-fs-md);

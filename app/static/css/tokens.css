@@ -1,50 +1,50 @@
 :root {
-  /* Surfaces */
-  --hn-bg-0: #0a0e17;   /* App background */
-  --hn-bg-1: #0f1523;   /* Panels */
-  --hn-bg-2: #151c2e;   /* Raised, hover, table header */
-  --hn-bg-3: #1c2539;   /* Inputs, active rows */
-  --hn-border: #232c42;
-  --hn-border-strong: #33405c;
+  /* Surfaces — Premium Dark Charcoal */
+  --hn-bg-0: #080B12;   /* App background */
+  --hn-bg-1: #0D111B;   /* Panels */
+  --hn-bg-2: #111722;   /* Raised, hover, table header */
+  --hn-bg-3: #171D29;   /* Inputs, active rows */
+  --hn-border: #283142;
+  --hn-border-strong: #374156;
 
   /* Typography Colors */
-  --hn-text: #e6ebf5;
-  --hn-text-dim: #9aa6bf;
-  --hn-text-faint: #67738f;
+  --hn-text: #F4F6FA;
+  --hn-text-dim: #A3ADBD;
+  --hn-text-faint: #6A7589;
 
-  /* Restrained Accents */
-  --hn-accent: #4c8dff;
-  --hn-accent-weak: rgba(76, 141, 255, 0.14);
-  --hn-cyan: #35c2d6;
+  /* Primary Accent — Orange / Red-Orange */
+  --hn-accent: #FF5722;
+  --hn-accent-weak: rgba(255, 87, 34, 0.14);
+  --hn-cyan: #FF8A65;
 
   /* Semantic Severity Tokens */
-  --hn-sev-normal: #3fb68b;
-  --hn-sev-normal-bg: rgba(63, 182, 139, 0.14);
+  --hn-sev-normal: #29C995;
+  --hn-sev-normal-bg: rgba(41, 201, 149, 0.13);
 
-  --hn-sev-elevated: #e6b422;
-  --hn-sev-elevated-bg: rgba(230, 180, 34, 0.14);
+  --hn-sev-elevated: #FFB547;
+  --hn-sev-elevated-bg: rgba(255, 181, 71, 0.13);
 
-  --hn-sev-high: #f08a24;
-  --hn-sev-high-bg: rgba(240, 138, 36, 0.16);
+  --hn-sev-high: #FF7043;
+  --hn-sev-high-bg: rgba(255, 112, 67, 0.15);
 
-  --hn-sev-critical: #ef4655;
-  --hn-sev-critical-bg: rgba(239, 70, 85, 0.18);
+  --hn-sev-critical: #FF4545;
+  --hn-sev-critical-bg: rgba(255, 69, 69, 0.16);
 
   /* Operational Status */
-  --hn-ok: #3fb68b;
-  --hn-warn: #e6b422;
-  --hn-down: #ef4655;
-  --hn-info: #4c8dff;
+  --hn-ok: #29C995;
+  --hn-warn: #FFB547;
+  --hn-down: #FF4545;
+  --hn-info: #FF5722;
 
   /* Attack Category Palette */
-  --hn-cat-1: #4c8dff;
-  --hn-cat-2: #35c2d6;
-  --hn-cat-3: #a78bfa;
-  --hn-cat-4: #f472b6;
-  --hn-cat-5: #e6b422;
-  --hn-cat-6: #f08a24;
-  --hn-cat-7: #3fb68b;
-  --hn-cat-8: #94a3b8;
+  --hn-cat-1: #FF5722;
+  --hn-cat-2: #FF8A65;
+  --hn-cat-3: #FFB547;
+  --hn-cat-4: #FF7043;
+  --hn-cat-5: #FF3D3D;
+  --hn-cat-6: #FF6B35;
+  --hn-cat-7: #29C995;
+  --hn-cat-8: #8A9BB5;
 
   /* Typography Scales */
   --hn-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -71,7 +71,7 @@
   --hn-r-sm: 6px;
   --hn-r-md: 10px;
   --hn-r-lg: 14px;
-  --hn-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --hn-shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.6);
 
   /* Motion */
   --hn-dur-fast: 120ms;

@@ -24,6 +24,7 @@
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--hn-border);
+  background: linear-gradient(90deg, rgba(255, 87, 34, 0.08) 0%, transparent 100%);
   font-weight: 700;
   font-size: var(--hn-fs-md);
   color: var(--hn-text);
@@ -158,7 +159,7 @@
 
 .hn-dot-live {
   background: var(--hn-ok);
-  box-shadow: 0 0 8px rgba(63, 182, 139, 0.6);
+  box-shadow: 0 0 8px rgba(41, 201, 149, 0.6);
   animation: hn-pulse 2s infinite ease-in-out;
 }
 
