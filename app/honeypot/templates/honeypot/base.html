@@ -3,67 +3,737 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}{{ company }}{% endblock %}</title>
+  <title>{% block title %}{{ company }} — Enterprise Infrastructure & Digital Operations{% endblock %}</title>
+  
   <style>
     :root {
-      --primary: #FF5722;
-      --primary-hover: #E64A19;
-      --bg: #080B12;
-      --surface: #0D111B;
-      --surface-elevated: #111722;
-      --border: #283142;
-      --text: #F4F6FA;
-      --text-muted: #A3ADBD;
+      --sc-bg: #080B12;
+      --sc-surface: #0D111B;
+      --sc-card: #111722;
+      --sc-card-hover: #171D29;
+      --sc-border: #283142;
+      --sc-border-light: #374156;
+      --sc-primary: #FF5722;
+      --sc-primary-hover: #E64A19;
+      --sc-secondary: #FF3D3D;
+      --sc-text: #F4F6FA;
+      --sc-text-dim: #A3ADBD;
+      --sc-text-faint: #6A7589;
+      --sc-success: #29C995;
+      --sc-warning: #FFB547;
+      --sc-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --sc-mono: "JetBrains Mono", Consolas, monospace;
+      
+      /* Legacy aliases for sub-templates */
+      --primary: var(--sc-primary);
+      --primary-hover: var(--sc-primary-hover);
+      --bg: var(--sc-bg);
+      --surface: var(--sc-surface);
+      --border: var(--sc-border);
+      --text: var(--sc-text);
+      --text-muted: var(--sc-text-dim);
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); background-image: radial-gradient(ellipse at 80% 0%, rgba(255, 87, 34, 0.05) 0%, transparent 60%); color: var(--text); line-height: 1.5; }
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--primary); text-decoration: none; }
-    nav a { margin-left: 20px; text-decoration: none; color: var(--text-muted); font-size: 14px; font-weight: 500; transition: color 0.15s ease; }
-    nav a:hover, nav a.active { color: var(--primary); }
-    .container { max-width: 1080px; margin: 32px auto; padding: 0 16px; }
-    footer { text-align: center; padding: 32px 16px; font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 48px; background: var(--surface); }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    .btn { display: inline-block; background: var(--primary); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background 0.15s ease; }
-    .btn:hover { background: var(--primary-hover); }
-    .btn-secondary { background: #171D29; color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: #202737; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
-    .form-control { width: 100%; padding: 8px 12px; background: #111722; color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; }
-    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.2); }
-    .alert-danger { background: rgba(255, 69, 69, 0.12); border: 1px solid rgba(255, 69, 69, 0.3); color: #FF4545; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
-    .alert-success { background: rgba(41, 201, 149, 0.12); border: 1px solid rgba(41, 201, 149, 0.3); color: #29C995; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
+    
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--sc-bg);
+      background-image: 
+        radial-gradient(ellipse at 85% 0%, rgba(255, 87, 34, 0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 15% 100%, rgba(255, 61, 61, 0.04) 0%, transparent 50%);
+      color: var(--sc-text);
+      font-family: var(--sc-font);
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* -------------------------------------------------------------
+       Corporate Navigation Bar
+       ------------------------------------------------------------- */
+    .sc-header {
+      background: rgba(13, 17, 27, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--sc-border);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      width: 100%;
+    }
+
+    .sc-nav-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .sc-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 19px;
+      color: var(--sc-text);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+
+    .sc-brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sc-brand span {
+      background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sc-nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .sc-nav-link {
+      color: var(--sc-text-dim);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .sc-nav-link:hover {
+      color: var(--sc-text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .sc-nav-link.active {
+      color: var(--sc-text);
+      font-weight: 600;
+      position: relative;
+    }
+
+    .sc-nav-link.active::after {
+      content: "";
+      position: absolute;
+      bottom: 2px;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      background: var(--sc-primary);
+      border-radius: 2px;
+    }
+
+    .sc-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .sc-btn-icon {
+      background: transparent;
+      border: 1px solid var(--sc-border);
+      color: var(--sc-text-dim);
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .sc-btn-icon:hover {
+      border-color: var(--sc-border-light);
+      color: var(--sc-text);
+      background: var(--sc-card);
+    }
+
+    .sc-btn-primary {
+      background: linear-gradient(135deg, var(--sc-primary) 0%, #FF3D3D 100%);
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 12px rgba(255, 87, 34, 0.25);
+    }
+
+    .sc-btn-primary:hover {
+      background: linear-gradient(135deg, #FF6E40 0%, #FF5252 100%);
+      box-shadow: 0 4px 18px rgba(255, 87, 34, 0.38);
+      transform: translateY(-1px);
+    }
+
+    /* Mobile Hamburger */
+    .sc-mobile-toggle {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--sc-border);
+      color: var(--sc-text);
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* -------------------------------------------------------------
+       Inner Pages Container (for /login, /admin, /files, etc.)
+       ------------------------------------------------------------- */
+    .sc-home-main {
+      width: 100%;
+      flex: 1;
+    }
+
+    .sc-inner-container {
+      max-width: 1180px;
+      margin: 36px auto;
+      padding: 0 24px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* Common Card & Component Styling for Internal Honeypot Views */
+    .card {
+      background: var(--sc-surface);
+      border: 1px solid var(--sc-border);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--sc-primary);
+      color: #FFFFFF;
+      padding: 9px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .btn:hover {
+      background: var(--sc-primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--sc-card);
+      color: var(--sc-text);
+      border: 1px solid var(--sc-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--sc-card-hover);
+      border-color: var(--sc-border-light);
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--sc-text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--sc-card);
+      color: var(--sc-text);
+      border: 1px solid var(--sc-border);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.18s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--sc-primary);
+      box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.18);
+    }
+
+    .alert-danger {
+      background: rgba(255, 69, 69, 0.12);
+      border: 1px solid rgba(255, 69, 69, 0.3);
+      color: #FF4545;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 18px;
+      font-size: 13px;
+    }
+
+    .alert-success {
+      background: rgba(41, 201, 149, 0.12);
+      border: 1px solid rgba(41, 201, 149, 0.3);
+      color: var(--sc-success);
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 18px;
+      font-size: 13px;
+    }
+
+    /* -------------------------------------------------------------
+       Corporate Footer
+       ------------------------------------------------------------- */
+    .sc-footer {
+      background: #06080F;
+      border-top: 1px solid var(--sc-border);
+      padding-top: 56px;
+      margin-top: auto;
+      color: var(--sc-text-dim);
+      font-size: 13px;
+    }
+
+    .sc-footer-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .sc-footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr 1.2fr 1.2fr 1.8fr;
+      gap: 40px;
+      padding-bottom: 48px;
+    }
+
+    .sc-footer-brand-desc {
+      font-size: 13px;
+      color: var(--sc-text-dim);
+      line-height: 1.6;
+      margin-top: 14px;
+      max-width: 300px;
+    }
+
+    .sc-footer-col h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--sc-text);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    .sc-footer-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sc-footer-col a {
+      color: var(--sc-text-dim);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .sc-footer-col a:hover {
+      color: var(--sc-primary);
+    }
+
+    .sc-newsletter-text {
+      font-size: 12px;
+      color: var(--sc-text-dim);
+      margin-bottom: 12px;
+    }
+
+    .sc-newsletter-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .sc-newsletter-input {
+      background: var(--sc-card);
+      border: 1px solid var(--sc-border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--sc-text);
+      font-size: 12px;
+      flex: 1;
+      outline: none;
+    }
+
+    .sc-newsletter-input:focus {
+      border-color: var(--sc-primary);
+    }
+
+    .sc-footer-bottom {
+      border-top: 1px solid rgba(40, 49, 66, 0.6);
+      padding: 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--sc-text-faint);
+    }
+
+    .sc-footer-legal-links {
+      display: flex;
+      gap: 18px;
+    }
+
+    .sc-footer-legal-links a {
+      color: var(--sc-text-faint);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .sc-footer-legal-links a:hover {
+      color: var(--sc-text-dim);
+    }
+
+    /* Modal / Popups */
+    .sc-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 7, 12, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .sc-modal-backdrop.active {
+      display: flex;
+    }
+
+    .sc-modal {
+      background: var(--sc-surface);
+      border: 1px solid var(--sc-border);
+      border-top: 3px solid var(--sc-primary);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 480px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      position: relative;
+    }
+
+    .sc-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .sc-modal-close {
+      background: transparent;
+      border: none;
+      color: var(--sc-text-dim);
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    /* Responsive */
+    @media (max-width: 1080px) {
+      .sc-nav-menu { display: none; }
+      .sc-mobile-toggle { display: flex; }
+      .sc-footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .sc-footer-grid { grid-template-columns: 1fr; }
+      .sc-footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    }
   </style>
+
   {% block head %}{% endblock %}
 </head>
 <body>
-  <header>
-    <a href="/" class="brand">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      {{ company }}
-    </a>
-    <nav>
-      <a href="/">Home</a>
-      <a href="/login">Employee Portal</a>
-      <a href="/admin">Admin Console</a>
-      <a href="/files">File Repository</a>
-      <a href="/database">Database Query</a>
-      <a href="/api">API v1</a>
-      <a href="/shell">Web Terminal</a>
-    </nav>
+  <!-- Corporate Navigation Bar -->
+  <header class="sc-header">
+    <div class="sc-nav-container">
+      <a href="/" class="sc-brand">
+        <!-- Exact 3-Tier Isometric Corporate Logo from Design Reference -->
+        <div class="sc-brand-logo">
+          <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+            <path d="M14 2L26 8.5L14 15L2 8.5L14 2Z" fill="#FF5722"/>
+            <path d="M2 13.5L14 20L26 13.5" stroke="#FF5722" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 18.5L14 25L26 18.5" stroke="#FF5722" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span>SecureCorp Inc.</span>
+      </a>
+
+      <!-- Desktop Links -->
+      <nav>
+        <ul class="sc-nav-menu">
+          <li><a href="/" class="sc-nav-link {% if request.path == '/' %}active{% endif %}">Home</a></li>
+          <li><a href="/#solutions" class="sc-nav-link">Solutions <span style="font-size:10px; margin-top:2px;">▾</span></a></li>
+          <li><a href="/#services" class="sc-nav-link">Services</a></li>
+          <li><a href="/login" class="sc-nav-link {% if request.path.startswith('/login') %}active{% endif %}">Employee Portal</a></li>
+          <li><a href="/admin" class="sc-nav-link {% if request.path.startswith('/admin') %}active{% endif %}">Admin Console</a></li>
+          <li><a href="/files" class="sc-nav-link {% if request.path.startswith('/files') %}active{% endif %}">File Repository</a></li>
+          <li><a href="/api" class="sc-nav-link {% if request.path.startswith('/api') %}active{% endif %}">API v1</a></li>
+          <li><a href="/shell" class="sc-nav-link {% if request.path.startswith('/shell') %}active{% endif %}">Web Terminal</a></li>
+        </ul>
+      </nav>
+
+      <!-- Right Action CTAs -->
+      <div class="sc-nav-actions">
+        <button class="sc-btn-icon" onclick="openSearchModal();" title="Search Enterprise Resources" aria-label="Search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <a href="#contact" onclick="openContactModal(); return false;" class="sc-btn-primary">
+          Contact Us &rarr;
+        </a>
+        <button class="sc-mobile-toggle" onclick="toggleMobileNav();" aria-label="Toggle Navigation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Dropdown -->
+    <div id="scMobileNav" style="display:none; background:var(--sc-surface); border-bottom:1px solid var(--sc-border); padding:16px 24px;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <a href="/" class="sc-nav-link">Home</a>
+        <a href="/#solutions" class="sc-nav-link">Solutions</a>
+        <a href="/#services" class="sc-nav-link">Services</a>
+        <a href="/login" class="sc-nav-link">Employee Portal</a>
+        <a href="/admin" class="sc-nav-link">Admin Console</a>
+        <a href="/files" class="sc-nav-link">File Repository</a>
+        <a href="/api" class="sc-nav-link">API v1</a>
+        <a href="/shell" class="sc-nav-link">Web Terminal</a>
+      </div>
+    </div>
   </header>
 
-  <div class="container">
+  <!-- Page Content Container -->
+  <main class="{% if request.path == '/' %}sc-home-main{% else %}sc-inner-container{% endif %}">
     {% block content %}{% endblock %}
+  </main>
+
+  <!-- Corporate Footer -->
+  <footer class="sc-footer">
+    <div class="sc-footer-container">
+      <div class="sc-footer-grid">
+        <!-- Col 1: Brand & Overview -->
+        <div>
+          <a href="/" class="sc-brand">
+            <div class="sc-brand-logo">
+              <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+                <path d="M14 2L26 8.5L14 15L2 8.5L14 2Z" fill="#FF5722"/>
+                <path d="M2 13.5L14 20L26 13.5" stroke="#FF5722" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 18.5L14 25L26 18.5" stroke="#FF5722" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span>SecureCorp Inc.</span>
+          </a>
+          <p class="sc-footer-brand-desc">
+            Delivering secure, scalable and innovative technology solutions for modern enterprises.
+          </p>
+        </div>
+
+        <!-- Col 2: Corporate Services -->
+        <div class="sc-footer-col">
+          <h4>Corporate Services</h4>
+          <ul>
+            <li><a href="/#services">Infrastructure</a></li>
+            <li><a href="/#services">Cloud Operations</a></li>
+            <li><a href="/#services">Identity & Access</a></li>
+            <li><a href="/#services">Integration Services</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Employee Resources -->
+        <div class="sc-footer-col">
+          <h4>Employee Resources</h4>
+          <ul>
+            <li><a href="/login">Employee Portal</a></li>
+            <li><a href="/files">File Repository</a></li>
+            <li><a href="/api">API Documentation</a></li>
+            <li><a href="/shell">Web Terminal</a></li>
+            <li><a href="/admin">Admin Console</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 4: Support -->
+        <div class="sc-footer-col">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="#contact" onclick="openContactModal(); return false;">Help Center</a></li>
+            <li><a href="#contact" onclick="openContactModal(); return false;">Contact Us</a></li>
+            <li><a href="/database">System Status</a></li>
+            <li><a href="/#services">Technical Support</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 5: Newsletter / Updates -->
+        <div class="sc-footer-col">
+          <h4>Stay Updated</h4>
+          <p class="sc-newsletter-text">Get the latest updates and announcements.</p>
+          <form class="sc-newsletter-form" onsubmit="handleNewsletter(event);">
+            <input type="email" placeholder="Enter your email address" class="sc-newsletter-input" required>
+            <button type="submit" class="sc-btn-primary" style="padding: 8px 12px; font-size:12px;">
+              Subscribe &rarr;
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Footer Bottom Copyright & Legal Strip -->
+      <div class="sc-footer-bottom">
+        <div>
+          &copy; 2026 SecureCorp Inc. All rights reserved. &nbsp;|&nbsp; 
+          <span style="color:var(--sc-text-faint);">Confidential &mdash; Internal Use Only</span>
+        </div>
+        <div class="sc-footer-legal-links">
+          <a href="#privacy" onclick="alert('SecureCorp Privacy Policy (Synthetic Corporate Environment)'); return false;">Privacy Policy</a>
+          <a href="#terms" onclick="alert('SecureCorp Terms of Enterprise Service'); return false;">Terms of Service</a>
+          <a href="/database">Security</a>
+          <a href="#contact" onclick="openContactModal(); return false;">Contact</a>
+          <a href="/auth/login" style="opacity: 0.5; margin-left: 8px;" title="Operator Console">SOC Portal &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Search Modal -->
+  <div class="sc-modal-backdrop" id="scSearchModal" onclick="if(event.target===this)closeSearchModal();">
+    <div class="sc-modal">
+      <div class="sc-modal-header">
+        <h3 style="font-size:16px; font-weight:700; color:var(--sc-text);">Enterprise Resource Search</h3>
+        <button class="sc-modal-close" onclick="closeSearchModal();">&times;</button>
+      </div>
+      <p style="font-size:12px; color:var(--sc-text-dim); margin-bottom:14px;">
+        Search internal repositories, documentation, and operational endpoints.
+      </p>
+      <form method="GET" action="/database">
+        <input type="text" name="q" class="form-control" placeholder="Search keywords (e.g. admin, users, backup, api)..." autofocus>
+        <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeSearchModal();">Cancel</button>
+          <button type="submit" class="sc-btn-primary">Search &rarr;</button>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <footer>
-    <p>&copy; 2026 {{ company }} — All rights reserved. Authorized corporate access only.</p>
-    <p style="margin-top:6px; font-size:11px;">
-      <a href="/dashboard/" style="color:var(--text-muted); text-decoration:none;">Private SOC Analyst Portal</a> •
-      <a href="/auth/login" style="color:var(--text-muted); text-decoration:none;">Operator Login</a>
-    </p>
-  </footer>
+  <!-- Contact Modal -->
+  <div class="sc-modal-backdrop" id="scContactModal" onclick="if(event.target===this)closeContactModal();">
+    <div class="sc-modal">
+      <div class="sc-modal-header">
+        <h3 style="font-size:16px; font-weight:700; color:var(--sc-text);">Contact Enterprise Support</h3>
+        <button class="sc-modal-close" onclick="closeContactModal();">&times;</button>
+      </div>
+      <p style="font-size:12px; color:var(--sc-text-dim); margin-bottom:16px;">
+        Submit an inquiry to the SecureCorp IT Solutions and Operations dispatch desk.
+      </p>
+      <form onsubmit="handleContactSubmit(event);">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" class="form-control" placeholder="e.g. Alex Mercer" required>
+        </div>
+        <div class="form-group">
+          <label>Corporate Email</label>
+          <input type="email" class="form-control" placeholder="user@company.com" required>
+        </div>
+        <div class="form-group">
+          <label>Department / Subject</label>
+          <input type="text" class="form-control" placeholder="Enterprise Infrastructure Services" required>
+        </div>
+        <div class="form-group">
+          <label>Inquiry Details</label>
+          <textarea class="form-control" rows="3" placeholder="Describe your technical requirements..." required></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn btn-secondary" onclick="closeContactModal();">Close</button>
+          <button type="submit" class="sc-btn-primary">Submit Inquiry &rarr;</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function toggleMobileNav() {
+      const el = document.getElementById('scMobileNav');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function openSearchModal() {
+      document.getElementById('scSearchModal').classList.add('active');
+    }
+
+    function closeSearchModal() {
+      document.getElementById('scSearchModal').classList.remove('active');
+    }
+
+    function openContactModal() {
+      document.getElementById('scContactModal').classList.add('active');
+    }
+
+    function closeContactModal() {
+      document.getElementById('scContactModal').classList.remove('active');
+    }
+
+    function handleNewsletter(e) {
+      e.preventDefault();
+      alert('Thank you for subscribing to SecureCorp Enterprise announcements.');
+      e.target.reset();
+    }
+
+    function handleContactSubmit(e) {
+      e.preventDefault();
+      alert('Inquiry dispatched to SecureCorp IT Operations Dispatch. Case ticket generated.');
+      closeContactModal();
+      e.target.reset();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeSearchModal();
+        closeContactModal();
+      }
+    });
+  </script>
 </body>
 </html>

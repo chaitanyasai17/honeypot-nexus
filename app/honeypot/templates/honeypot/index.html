@@ -1,36 +1,773 @@
 {% extends "honeypot/base.html" %}
 
-{% block title %}Welcome to {{ company }}{% endblock %}
+{% block title %}Enterprise Infrastructure & Digital Operations — {{ company }}{% endblock %}
+
+{% block head %}
+<style>
+  /* -------------------------------------------------------------
+     Hero Section
+     ------------------------------------------------------------- */
+  .sc-hero {
+    position: relative;
+    padding: 48px 0 36px;
+    overflow: hidden;
+  }
+
+  .sc-hero-container {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .sc-hero-content {
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+  }
+
+  .sc-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--sc-primary);
+    margin-bottom: 16px;
+  }
+
+  .sc-kicker::before {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    background: var(--sc-primary);
+    border-radius: 2px;
+  }
+
+  .sc-hero-title {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: #FFFFFF;
+    margin-bottom: 18px;
+  }
+
+  .sc-hero-highlight {
+    background: linear-gradient(135deg, #FF5722 0%, #FF7043 50%, #FF3D3D 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .sc-hero-sub {
+    font-size: 16px;
+    color: var(--sc-text-dim);
+    line-height: 1.6;
+    margin-bottom: 32px;
+    max-width: 540px;
+  }
+
+  .sc-hero-ctas {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .sc-hero-btn-primary {
+    background: linear-gradient(135deg, var(--sc-primary) 0%, #FF3D3D 100%);
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(255, 87, 34, 0.35);
+    transition: all 0.22s ease;
+  }
+
+  .sc-hero-btn-primary:hover {
+    box-shadow: 0 6px 26px rgba(255, 87, 34, 0.5);
+    transform: translateY(-2px);
+  }
+
+  .sc-hero-btn-secondary {
+    background: var(--sc-card);
+    border: 1px solid var(--sc-border);
+    color: var(--sc-text);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .sc-hero-btn-secondary:hover {
+    background: var(--sc-card-hover);
+    border-color: var(--sc-border-light);
+    color: #FFFFFF;
+    transform: translateY(-1px);
+  }
+
+  /* Right Visual: Realistic Architectural Headquarters */
+  .sc-hero-visual {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--sc-border);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 87, 34, 0.08);
+    background: var(--sc-surface);
+  }
+
+  .sc-hero-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+  }
+
+  .sc-hero-visual:hover .sc-hero-img {
+    transform: scale(1.02);
+  }
+
+  /* Overlay Glow Accents */
+  .sc-hero-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8, 11, 18, 0.1) 0%, rgba(8, 11, 18, 0.45) 100%);
+    pointer-events: none;
+  }
+
+  /* Floating Trust Badge */
+  .sc-hero-floating-badge {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(13, 17, 27, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--sc-border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sc-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 5;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .sc-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sc-primary);
+    box-shadow: 0 0 8px var(--sc-primary);
+  }
+
+  /* Vertical Tag on Edge */
+  .sc-hero-edge-tag {
+    position: absolute;
+    top: 20px;
+    right: 18px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--sc-primary);
+    text-transform: uppercase;
+    z-index: 5;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sc-hero-edge-tag::before {
+    content: "";
+    display: inline-block;
+    width: 2px;
+    height: 16px;
+    background: var(--sc-primary);
+  }
+
+  /* -------------------------------------------------------------
+     Statistics Strip
+     ------------------------------------------------------------- */
+  .sc-stats-strip {
+    max-width: 1320px;
+    margin: 18px auto 0;
+    padding: 0 24px;
+  }
+
+  .sc-stats-container {
+    background: rgba(13, 17, 27, 0.7);
+    border: 1px solid var(--sc-border);
+    border-radius: 12px;
+    padding: 22px 32px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    backdrop-filter: blur(8px);
+  }
+
+  .sc-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .sc-stat-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(255, 87, 34, 0.1);
+    border: 1px solid rgba(255, 87, 34, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sc-primary);
+    flex-shrink: 0;
+  }
+
+  .sc-stat-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .sc-stat-lbl {
+    font-size: 12px;
+    color: var(--sc-text-dim);
+    margin-top: 3px;
+    font-weight: 500;
+  }
+
+  /* -------------------------------------------------------------
+     Services Section
+     ------------------------------------------------------------- */
+  .sc-section {
+    max-width: 1320px;
+    margin: 68px auto 0;
+    padding: 0 24px;
+  }
+
+  .sc-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    gap: 20px;
+  }
+
+  .sc-section-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: -0.02em;
+    margin-top: 4px;
+  }
+
+  .sc-section-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sc-primary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.15s ease;
+  }
+
+  .sc-section-link:hover {
+    color: #FF7043;
+  }
+
+  .sc-services-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .sc-service-card {
+    background: var(--sc-surface);
+    border: 1px solid var(--sc-border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.24s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 170px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .sc-service-card:hover {
+    border-color: rgba(255, 87, 34, 0.45);
+    background: var(--sc-card);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 87, 34, 0.1);
+  }
+
+  .sc-service-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .sc-service-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: rgba(255, 87, 34, 0.12);
+    border: 1px solid rgba(255, 87, 34, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sc-primary);
+  }
+
+  .sc-service-arrow {
+    color: var(--sc-primary);
+    font-size: 16px;
+    opacity: 0.7;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .sc-service-card:hover .sc-service-arrow {
+    transform: translateX(4px);
+    opacity: 1;
+  }
+
+  .sc-service-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 6px;
+  }
+
+  .sc-service-desc {
+    font-size: 13px;
+    color: var(--sc-text-dim);
+    line-height: 1.5;
+  }
+
+  /* -------------------------------------------------------------
+     Quick Access / Enterprise Resources Section
+     ------------------------------------------------------------- */
+  .sc-resources-section {
+    max-width: 1320px;
+    margin: 56px auto 72px;
+    padding: 0 24px;
+  }
+
+  .sc-resources-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  .sc-resource-card {
+    background: var(--sc-surface);
+    border: 1px solid var(--sc-border);
+    border-radius: 10px;
+    padding: 18px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.22s ease;
+    position: relative;
+  }
+
+  .sc-resource-card:hover {
+    border-color: rgba(255, 87, 34, 0.45);
+    background: var(--sc-card);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .sc-resource-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: rgba(255, 87, 34, 0.12);
+    border: 1px solid rgba(255, 87, 34, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sc-primary);
+    flex-shrink: 0;
+  }
+
+  .sc-resource-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sc-resource-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #FFFFFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sc-resource-sub {
+    font-size: 11px;
+    color: var(--sc-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .sc-resource-arrow {
+    color: var(--sc-text-faint);
+    font-size: 14px;
+    transition: all 0.18s ease;
+  }
+
+  .sc-resource-card:hover .sc-resource-arrow {
+    color: var(--sc-primary);
+    transform: translateX(3px);
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 1080px) {
+    .sc-hero-container { grid-template-columns: 1fr; gap: 36px; }
+    .sc-stats-container { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .sc-services-grid { grid-template-columns: repeat(2, 1fr); }
+    .sc-resources-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 640px) {
+    .sc-hero-title { font-size: 32px; }
+    .sc-stats-container { grid-template-columns: 1fr; }
+    .sc-services-grid { grid-template-columns: 1fr; }
+    .sc-resources-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="text-align: center; padding: 40px 0;">
-  <h1 style="font-size: 32px; font-weight: 800; color: var(--text); margin-bottom: 12px;">Enterprise Infrastructure & Services</h1>
-  <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto 32px; font-size: 16px;">
-    Unified operations portal for internal staff, system administrators, and integration services.
-  </p>
-  <div style="display: flex; justify-content: center; gap: 16px;">
-    <a href="/login" class="btn">Sign In to Employee Portal</a>
-    <a href="/api" class="btn btn-secondary">Explore API Documentation</a>
-  </div>
-</div>
+<!-- 1. Hero Section -->
+<section class="sc-hero">
+  <div class="sc-hero-container">
+    <!-- Left Hero Column -->
+    <div class="sc-hero-content">
+      <div class="sc-kicker">ENTERPRISE IT SOLUTIONS</div>
+      
+      <h1 class="sc-hero-title">
+        Enterprise Infrastructure.<br>
+        <span class="sc-hero-highlight">Secure Digital Operations.</span>
+      </h1>
+      
+      <p class="sc-hero-sub">
+        Integrated technology services, enterprise infrastructure, and digital operations solutions designed to help organizations operate efficiently, securely and at scale.
+      </p>
+      
+      <div class="sc-hero-ctas">
+        <a href="#services" class="sc-hero-btn-primary">
+          Explore Our Solutions &rarr;
+        </a>
+        <a href="/login" class="sc-hero-btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          Employee Sign In
+        </a>
+      </div>
+    </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 24px;">
-  <div class="card">
-    <h3 style="font-size: 16px; margin-bottom: 8px;">🔐 Internal Portal</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Corporate single sign-on access for operations and administration personnel.</p>
-    <a href="/login" style="color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none;">Launch Portal &rarr;</a>
+    <!-- Right Hero Column: High-Tech Enterprise Headquarters Visual -->
+    <div class="sc-hero-visual">
+      <img src="{{ url_for('static', filename='securecorp_hq_pure.jpg') }}" alt="SecureCorp Corporate Headquarters" class="sc-hero-img">
+      
+
+      
+      <div class="sc-hero-floating-badge">
+        <span class="sc-status-dot"></span>
+        Trusted Technology Partner for Modern Enterprises
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Statistics Strip -->
+<section class="sc-stats-strip">
+  <div class="sc-stats-container">
+    <div class="sc-stat-item">
+      <div class="sc-stat-icon-wrapper">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+          <path d="M9 22v-4h6v4"/><line x1="8" y1="6" x2="8.01" y2="6"/><line x1="16" y1="6" x2="16.01" y2="6"/>
+          <line x1="12" y1="6" x2="12.01" y2="6"/><line x1="8" y1="10" x2="8.01" y2="10"/><line x1="12" y1="10" x2="12.01" y2="10"/><line x1="16" y1="10" x2="16.01" y2="10"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sc-stat-val">500+</div>
+        <div class="sc-stat-lbl">Enterprise Solutions</div>
+      </div>
+    </div>
+
+    <div class="sc-stat-item">
+      <div class="sc-stat-icon-wrapper">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sc-stat-val">24/7</div>
+        <div class="sc-stat-lbl">Infrastructure Services</div>
+      </div>
+    </div>
+
+    <div class="sc-stat-item">
+      <div class="sc-stat-icon-wrapper">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sc-stat-val">99.9%</div>
+        <div class="sc-stat-lbl">System Availability <span style="font-size:10px; color:var(--sc-text-faint);">(Synthetic Data)</span></div>
+      </div>
+    </div>
+
+    <div class="sc-stat-item">
+      <div class="sc-stat-icon-wrapper">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sc-stat-val">Global</div>
+        <div class="sc-stat-lbl">Technical Support</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Corporate Services Section -->
+<section class="sc-section" id="services">
+  <div class="sc-section-header">
+    <div>
+      <div class="sc-kicker">OUR SERVICES</div>
+      <h2 class="sc-section-title">Technology Solutions for Modern Enterprises</h2>
+    </div>
+    <a href="#services" class="sc-section-link">View All Services &rarr;</a>
   </div>
 
-  <div class="card">
-    <h3 style="font-size: 16px; margin-bottom: 8px;">📁 Document Repository</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Central staging and distribution repository for policies, reports, and backups.</p>
-    <a href="/files" style="color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none;">Browse Files &rarr;</a>
+  <div class="sc-services-grid" id="solutions">
+    <!-- Service 1 -->
+    <a href="/login" class="sc-service-card">
+      <div class="sc-service-top">
+        <div class="sc-service-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+        </div>
+        <span class="sc-service-arrow">&rarr;</span>
+      </div>
+      <div>
+        <h3 class="sc-service-title">Enterprise Infrastructure</h3>
+        <p class="sc-service-desc">Scalable and secure IT infrastructure solutions.</p>
+      </div>
+    </a>
+
+    <!-- Service 2 -->
+    <a href="/admin" class="sc-service-card">
+      <div class="sc-service-top">
+        <div class="sc-service-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+          </svg>
+        </div>
+        <span class="sc-service-arrow">&rarr;</span>
+      </div>
+      <div>
+        <h3 class="sc-service-title">Cloud & Systems Operations</h3>
+        <p class="sc-service-desc">Reliable cloud and system management services.</p>
+      </div>
+    </a>
+
+    <!-- Service 3 -->
+    <a href="/login" class="sc-service-card">
+      <div class="sc-service-top">
+        <div class="sc-service-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <circle cx="12" cy="11" r="3"/>
+          </svg>
+        </div>
+        <span class="sc-service-arrow">&rarr;</span>
+      </div>
+      <div>
+        <h3 class="sc-service-title">Identity & Access Management</h3>
+        <p class="sc-service-desc">Secure access and identity solutions for your organization.</p>
+      </div>
+    </a>
+
+    <!-- Service 4 -->
+    <a href="/files" class="sc-service-card">
+      <div class="sc-service-top">
+        <div class="sc-service-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <span class="sc-service-arrow">&rarr;</span>
+      </div>
+      <div>
+        <h3 class="sc-service-title">Data & Document Services</h3>
+        <p class="sc-service-desc">Centralized storage, sharing and document management.</p>
+      </div>
+    </a>
+
+    <!-- Service 5 -->
+    <a href="/api" class="sc-service-card">
+      <div class="sc-service-top">
+        <div class="sc-service-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </div>
+        <span class="sc-service-arrow">&rarr;</span>
+      </div>
+      <div>
+        <h3 class="sc-service-title">API & Integration Services</h3>
+        <p class="sc-service-desc">Seamless integration with modern applications.</p>
+      </div>
+    </a>
+
+    <!-- Service 6 -->
+    <a href="/shell" class="sc-service-card">
+      <div class="sc-service-top">
+        <div class="sc-service-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+          </svg>
+        </div>
+        <span class="sc-service-arrow">&rarr;</span>
+      </div>
+      <div>
+        <h3 class="sc-service-title">Technical Support</h3>
+        <p class="sc-service-desc">24/7 support for uninterrupted operations.</p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- 4. Quick Access / Enterprise Resources Section -->
+<section class="sc-resources-section">
+  <div class="sc-section-header">
+    <div>
+      <div class="sc-kicker">QUICK ACCESS</div>
+      <h2 class="sc-section-title">Enterprise Resources</h2>
+    </div>
   </div>
 
-  <div class="card">
-    <h3 style="font-size: 16px; margin-bottom: 8px;">💻 Web Terminal</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Emulated shell console for maintenance commands and diagnostics.</p>
-    <a href="/shell" style="color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none;">Open Shell &rarr;</a>
+  <div class="sc-resources-grid">
+    <!-- Resource 1: Employee Portal -->
+    <a href="/login" class="sc-resource-card">
+      <div class="sc-resource-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="sc-resource-info">
+        <div class="sc-resource-title">Employee Portal</div>
+        <div class="sc-resource-sub">Access internal resources</div>
+      </div>
+      <span class="sc-resource-arrow">&rarr;</span>
+    </a>
+
+    <!-- Resource 2: Admin Console -->
+    <a href="/admin" class="sc-resource-card">
+      <div class="sc-resource-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+      <div class="sc-resource-info">
+        <div class="sc-resource-title">Admin Console</div>
+        <div class="sc-resource-sub">System administration</div>
+      </div>
+      <span class="sc-resource-arrow">&rarr;</span>
+    </a>
+
+    <!-- Resource 3: File Repository -->
+    <a href="/files" class="sc-resource-card">
+      <div class="sc-resource-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div class="sc-resource-info">
+        <div class="sc-resource-title">File Repository</div>
+        <div class="sc-resource-sub">Browse documents</div>
+      </div>
+      <span class="sc-resource-arrow">&rarr;</span>
+    </a>
+
+    <!-- Resource 4: API v1 -->
+    <a href="/api" class="sc-resource-card">
+      <div class="sc-resource-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </div>
+      <div class="sc-resource-info">
+        <div class="sc-resource-title">API v1</div>
+        <div class="sc-resource-sub">API documentation</div>
+      </div>
+      <span class="sc-resource-arrow">&rarr;</span>
+    </a>
+
+    <!-- Resource 5: Web Terminal -->
+    <a href="/shell" class="sc-resource-card">
+      <div class="sc-resource-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+      </div>
+      <div class="sc-resource-info">
+        <div class="sc-resource-title">Web Terminal</div>
+        <div class="sc-resource-sub">Access command interface</div>
+      </div>
+      <span class="sc-resource-arrow">&rarr;</span>
+    </a>
   </div>
-</div>
+</section>
 {% endblock %}
