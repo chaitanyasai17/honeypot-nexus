@@ -56,6 +56,12 @@ export const API = {
   getHealth: () => apiRequest('/api/system/health'),
   getSurfaces: () => apiRequest('/api/honeypot/status'),
   getAudit: (params = {}) => apiRequest('/api/audit?' + new URLSearchParams(params).toString()),
+  getPreventionOverview: () => apiRequest('/api/prevention/overview'),
+  getPreventionBlocks: (params = {}) => apiRequest('/api/prevention/blocks?' + new URLSearchParams(params).toString()),
+  blockIp: (data) => apiRequest('/api/prevention/block', { method: 'POST', body: data }),
+  unblockIp: (data) => apiRequest('/api/prevention/unblock', { method: 'POST', body: data }),
+  getPreventionEvents: (limit = 50) => apiRequest(`/api/prevention/events?limit=${limit}`),
   runDemo: (scenario, intensity = 2) => apiRequest('/api/demo/run', { method: 'POST', body: { scenario, intensity } }),
   resetDemo: () => apiRequest('/api/demo/reset', { method: 'POST', body: { confirm: 'RESET' } }),
 };
+

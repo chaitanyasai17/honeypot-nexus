@@ -9,6 +9,8 @@ from app.events.schemas import SurfaceType, EventType, EventStatus
 from app.honeypot.capture import capture_interaction, attach_session_cookie, get_or_create_session_id
 from app.honeypot.content.company import COMPANY_NAME
 from app.honeypot.shell_sim import ShellState, run_command
+from app.extensions import limiter
+from app.config import Config
 
 shell_bp = Blueprint("honeypot_shell", __name__)
 
@@ -36,9 +38,19 @@ def shell_page():
 
 
 @shell_bp.route("/shell/exec", methods=["POST"])
+@limiter.limit(lambda: getattr(Config, "RATE_LIMIT_EXPENSIVE", "15 per minute"))
 def shell_exec():
-    data = request.get_json(silent=True) or {}
-    cmd = data.get("cmd", "")
+    if request.is_json:
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"error": "bad_request", "message": "Malformed JSON payload"}), 400
+    else:
+        data = {}
+
+    cmd = str(data.get("cmd", "") or "")
+    if len(cmd) > 1024:
+        return jsonify({"error": "payload_too_large", "message": "Command exceeds length limit"}), 400
+
     sid = get_or_create_session_id()
     state = _get_shell_state(sid)
 

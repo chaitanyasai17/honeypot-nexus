@@ -4,44 +4,60 @@ Implements login, MFA code verification, TOTP enrollment, and secure logout.
 """
 
 from datetime import datetime, timezone, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, session, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, session, make_response, current_app
 from app.models.models import User, utc_now
 from app.auth.security import hash_password, verify_password, create_admin_session
 from app.auth.mfa import generate_totp_secret, get_totp_uri, generate_qr_base64, verify_totp_code
 from app.services.audit_service import audit_log
 from app.extensions import db, limiter
+from app.config import Config
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit(lambda: getattr(Config, "RATE_LIMIT_LOGIN", "5 per minute"))
 def login_view():
     error = None
     next_url = request.args.get("next", "/dashboard/")
+    client_ip = request.remote_addr or "127.0.0.1"
+    from app.services.prevention_service import get_prevention_service
+    prev_svc = current_app.extensions.get("prevention_service") or get_prevention_service()
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
+        # 1. Check unified PreventionService lockout (IP-level and IP+username)
+        is_locked, lock_until = prev_svc.is_login_locked(client_ip, username)
+        if is_locked:
+            audit_log("auth.login.locked", username, "failure", {
+                "ip": client_ip,
+                "reason": "Lockout active",
+                "locked_until": lock_until.isoformat() if lock_until else ""
+            })
+            error = "Invalid credentials or account temporarily locked. Please try again later."
+            return render_template("auth/login.html", error=error, next=next_url)
+
         user = User.query.filter_by(username=username).first()
 
-        # Check account lockout
+        # 2. Check DB user lockout
         if user and user.locked_until:
             locked = user.locked_until
             if locked.tzinfo is not None:
                 locked = locked.astimezone(timezone.utc).replace(tzinfo=None)
             if locked > utc_now():
-                audit_log("auth.login.locked", username, "failure", {"reason": "Account locked"})
-                error = "Account is temporarily locked due to failed login attempts. Please try later."
+                audit_log("auth.login.locked", username, "failure", {"ip": client_ip, "reason": "User lockout active"})
+                error = "Invalid credentials or account temporarily locked. Please try again later."
                 return render_template("auth/login.html", error=error, next=next_url)
 
-        # Validate credentials
+        # 3. Validate credentials
         if user and verify_password(user.password_hash, password):
-            # Reset failed logins counter
+            # Success: reset counters
             user.failed_logins = 0
             user.locked_until = None
             db.session.commit()
+            prev_svc.record_login_success(client_ip, username)
 
             # Store pre-MFA state
             session["pre_mfa_uid"] = user.id
@@ -52,21 +68,29 @@ def login_view():
             return redirect(url_for("auth.mfa_view"))
 
         else:
+            # Failure: record attempt against both user and IP
+            is_newly_locked, count_val, lock_time = prev_svc.record_login_failure(client_ip, username)
             if user:
                 user.failed_logins += 1
-                if user.failed_logins >= 5:
-                    user.locked_until = utc_now() + timedelta(minutes=15)
-                    audit_log("auth.lockout", username, "locked", {"failed_count": user.failed_logins})
+                lockout_thresh = getattr(Config, "AUTH_LOCKOUT_THRESHOLD", 5)
+                lockout_duration = getattr(Config, "AUTH_LOCKOUT_DURATION_MINUTES", 15)
+                if user.failed_logins >= lockout_thresh:
+                    user.locked_until = utc_now() + timedelta(minutes=lockout_duration)
+                    audit_log("auth.lockout", username, "locked", {
+                        "ip": client_ip,
+                        "failed_count": user.failed_logins,
+                        "duration_minutes": lockout_duration
+                    })
                 db.session.commit()
 
-            audit_log("auth.login.failure", username, "failure")
-            error = "Invalid administrator credentials or account locked."
+            audit_log("auth.login.failure", username, "failure", {"ip": client_ip, "attempt": count_val})
+            error = "Invalid credentials or account temporarily locked. Please try again later."
 
     return render_template("auth/login.html", error=error, next=next_url)
 
 
 @auth_bp.route("/mfa", methods=["GET", "POST"])
-@limiter.limit("10 per minute")
+@limiter.limit(lambda: getattr(Config, "RATE_LIMIT_LOGIN", "5 per minute"))
 def mfa_view():
     uid = session.get("pre_mfa_uid")
     if not uid:

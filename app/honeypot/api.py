@@ -8,6 +8,8 @@ from app.events.schemas import SurfaceType, EventType, EventStatus
 from app.honeypot.capture import capture_interaction, attach_session_cookie
 from app.honeypot.content.company import COMPANY_NAME
 from app.honeypot.content.api_fixtures import API_USERS, API_CONFIG, API_BACKUP_LIST, API_TOKENS
+from app.extensions import limiter
+from app.config import Config
 
 api_bp = Blueprint("honeypot_api", __name__)
 
@@ -143,6 +145,31 @@ def api_tokens():
         http_status=200
     )
     return jsonify({"status": "success", "tokens": API_TOKENS})
+
+
+@api_bp.route("/api/v1/query", methods=["POST"])
+@limiter.limit(lambda: getattr(Config, "RATE_LIMIT_EXPENSIVE", "15 per minute"))
+def api_query():
+    if request.is_json:
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"error": "bad_request", "message": "Malformed JSON payload"}), 400
+    else:
+        data = request.form.to_dict()
+
+    sql_q = str(data.get("query", "") or "")
+    if len(sql_q) > 2048:
+        return jsonify({"error": "payload_too_large", "message": "Query string exceeds maximum permitted length"}), 400
+
+    capture_interaction(
+        surface=SurfaceType.api,
+        event_type=EventType.api_request,
+        status=EventStatus.success,
+        payload=sql_q,
+        meta={"endpoint": "/api/v1/query", "query": sql_q},
+        http_status=200
+    )
+    return jsonify({"status": "success", "rows": [], "count": 0, "message": "Query executed successfully on read-only replica."})
 
 
 @api_bp.route("/api/v1/<path:subpath>", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])

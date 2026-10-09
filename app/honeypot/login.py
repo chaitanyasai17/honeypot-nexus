@@ -8,11 +8,14 @@ from app.events.schemas import SurfaceType, EventType, EventStatus
 from app.honeypot.capture import capture_interaction, attach_session_cookie
 from app.honeypot.content.company import COMPANY_NAME
 from app.honeypot.content.users import HONEYPOT_ACCOUNTS
+from app.extensions import limiter
+from app.config import Config
 
 login_bp = Blueprint("honeypot_login", __name__)
 
 
 @login_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit(lambda: getattr(Config, "RATE_LIMIT_LOGIN", "5 per minute"))
 def login():
     error = None
     if request.method == "POST":

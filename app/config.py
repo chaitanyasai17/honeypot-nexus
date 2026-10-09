@@ -79,6 +79,32 @@ class Config:
     APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Asia/Kolkata")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+    # -------------------------------------------------------------
+    # Attack Prevention Layer Configurations
+    # -------------------------------------------------------------
+    # A. Request Rate Limiting
+    RATELIMIT_ENABLED = os.getenv("RATELIMIT_ENABLED", "true").lower() in ("true", "1", "yes")
+    RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "120 per minute")
+    RATE_LIMIT_HONEYPOT = os.getenv("RATE_LIMIT_HONEYPOT", "60 per minute")
+    RATE_LIMIT_LOGIN = os.getenv("RATE_LIMIT_LOGIN", "5 per minute")
+    RATE_LIMIT_EXPENSIVE = os.getenv("RATE_LIMIT_EXPENSIVE", "15 per minute")
+
+    # B. Brute-Force & Lockout Protection
+    AUTH_LOCKOUT_THRESHOLD = int(os.getenv("AUTH_LOCKOUT_THRESHOLD", "5"))
+    AUTH_LOCKOUT_DURATION_MINUTES = int(os.getenv("AUTH_LOCKOUT_DURATION_MINUTES", "15"))
+    AUTH_IP_FAIL_THRESHOLD = int(os.getenv("AUTH_IP_FAIL_THRESHOLD", "10"))
+
+    # C. Temporary Application-Level IP Blocking
+    AUTO_BLOCK_ENABLED = os.getenv("AUTO_BLOCK_ENABLED", "true").lower() in ("true", "1", "yes")
+    AUTO_BLOCK_RISK_THRESHOLD = int(os.getenv("AUTO_BLOCK_RISK_THRESHOLD", "85"))
+    AUTO_BLOCK_ATTACK_COUNT = int(os.getenv("AUTO_BLOCK_ATTACK_COUNT", "6"))
+    DEFAULT_BLOCK_DURATION_MINUTES = int(os.getenv("DEFAULT_BLOCK_DURATION_MINUTES", "30"))
+    IP_WHITELIST = [s.strip() for s in os.getenv("IP_WHITELIST", "127.0.0.1,::1,localhost").split(",") if s.strip()]
+
+    # D. Input Validation & Request Size Limits
+    MAX_CONTENT_LENGTH_KB = int(os.getenv("MAX_CONTENT_LENGTH_KB", "64"))
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(64 * 1024)))
+
     @classmethod
     def validate(cls):
         """Enforces critical secrets presence and bind security unless in TESTING."""

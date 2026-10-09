@@ -59,6 +59,23 @@ def detection_engine():
     )
 
 
+@dashboard_bp.route("/prevention")
+@login_required
+def prevention():
+    from app.services.prevention_service import get_prevention_service
+    prev_svc = get_prevention_service()
+    active_blocks = prev_svc.get_active_blocks()
+    active_lockouts = prev_svc.get_active_lockouts()
+    recent_rate_limits = prev_svc.get_recent_rate_limits(limit=20)
+    return render_template(
+        "dashboard/prevention.html",
+        active_page="prevention",
+        active_blocks=active_blocks,
+        active_lockouts=active_lockouts,
+        recent_rate_limits=recent_rate_limits
+    )
+
+
 @dashboard_bp.route("/sessions")
 @login_required
 def sessions():

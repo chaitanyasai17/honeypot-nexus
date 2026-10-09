@@ -660,3 +660,156 @@ def reset_demo():
 
     purge_synthetic_data()
     return jsonify({"status": "success", "message": "Synthetic telemetry purged"})
+
+
+# -------------------------------------------------------------
+# 12. Attack Prevention Layer Endpoints
+# -------------------------------------------------------------
+@api_soc_bp.route("/prevention/overview")
+@login_required
+def prevention_overview():
+    from app.services.prevention_service import get_prevention_service
+    from app.config import Config
+    prev_svc = get_prevention_service()
+
+    active_blocks = prev_svc.get_active_blocks()
+    lockouts = prev_svc.get_active_lockouts()
+    recent_rate_limits = prev_svc.get_recent_rate_limits(limit=25)
+
+    # Count total blocks recorded in DB
+    try:
+        from app.models.models import BlockedIP
+        total_blocks_count = BlockedIP.query.count()
+    except Exception:
+        total_blocks_count = len(active_blocks)
+
+    cutoff_24h = utc_now() - timedelta(hours=24)
+    rate_limit_24h_count = HoneypotEventModel.query.filter(
+        HoneypotEventModel.timestamp >= cutoff_24h,
+        HoneypotEventModel.event_type == "rate_limited"
+    ).count()
+
+    blocked_requests_24h_count = HoneypotEventModel.query.filter(
+        HoneypotEventModel.timestamp >= cutoff_24h,
+        HoneypotEventModel.event_type == "blocked_request"
+    ).count()
+
+    stats_obj = {
+        "active_blocks": len(active_blocks),
+        "total_blocks": total_blocks_count,
+        "active_lockouts": len(lockouts),
+        "rate_limited_24h": rate_limit_24h_count,
+        "blocked_requests_24h": blocked_requests_24h_count,
+        "auto_block_enabled": getattr(Config, "AUTO_BLOCK_ENABLED", True)
+    }
+
+    return jsonify({
+        "status": "success",
+        "kpis": stats_obj,
+        "stats": stats_obj,
+        "config": {
+            "auto_block_enabled": getattr(Config, "AUTO_BLOCK_ENABLED", True),
+            "risk_threshold": getattr(Config, "AUTO_BLOCK_RISK_THRESHOLD", 85),
+            "attack_count_threshold": getattr(Config, "AUTO_BLOCK_ATTACK_COUNT", 6),
+            "default_block_duration_minutes": getattr(Config, "DEFAULT_BLOCK_DURATION_MINUTES", 30),
+            "lockout_threshold": getattr(Config, "AUTH_LOCKOUT_THRESHOLD", 5),
+            "lockout_duration_minutes": getattr(Config, "AUTH_LOCKOUT_DURATION_MINUTES", 15),
+            "honeypot_rate_limit": getattr(Config, "RATE_LIMIT_HONEYPOT", "60 per minute"),
+            "login_rate_limit": getattr(Config, "RATE_LIMIT_LOGIN", "5 per minute")
+        },
+        "active_blocks": active_blocks,
+        "active_lockouts": lockouts,
+        "recent_rate_limits": recent_rate_limits
+    })
+
+
+@api_soc_bp.route("/prevention/blocks")
+@login_required
+def prevention_blocks():
+    from app.services.prevention_service import get_prevention_service
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    prev_svc = get_prevention_service()
+    return jsonify(prev_svc.get_all_blocks(page=page, per_page=per_page))
+
+
+@api_soc_bp.route("/prevention/block", methods=["POST"])
+@login_required
+@role_required("admin")
+def manual_block_ip():
+    from app.services.prevention_service import get_prevention_service
+    from app.auth.security import get_authenticated_user
+    body = request.get_json(silent=True) or request.form.to_dict() or {}
+    ip = str(body.get("ip", "")).strip()
+    reason = str(body.get("reason", "Manual block by SOC operator")).strip()
+    try:
+        duration = int(body.get("duration_minutes", 30))
+    except (ValueError, TypeError):
+        duration = 30
+
+    if not ip:
+        raise ApiError("validation_error", "IP address is required", 422)
+
+    prev_svc = get_prevention_service()
+    if prev_svc.is_whitelisted(ip):
+        raise ApiError("conflict", "Cannot block trusted or loopback IP address", 400)
+
+    user = get_authenticated_user()
+    blocked_by = user.username if user else "admin"
+
+    try:
+        block_data = prev_svc.block_ip(
+            ip=ip,
+            reason=reason,
+            duration_minutes=duration,
+            blocked_by=blocked_by
+        )
+        return jsonify({"status": "success", "message": f"IP {ip} blocked for {duration} minutes", "block": block_data})
+    except ValueError as ve:
+        raise ApiError("validation_error", str(ve), 422)
+    except Exception as e:
+        raise ApiError("internal_error", str(e), 500)
+
+
+@api_soc_bp.route("/prevention/unblock", methods=["POST"])
+@login_required
+@role_required("admin")
+def manual_unblock_ip():
+    from app.services.prevention_service import get_prevention_service
+    from app.auth.security import get_authenticated_user
+    body = request.get_json(silent=True) or request.form.to_dict() or {}
+    ip = str(body.get("ip", "")).strip()
+    reason = str(body.get("reason", "Manual unblock by SOC administrator")).strip()
+
+    if not ip:
+        raise ApiError("validation_error", "IP address is required", 422)
+
+    user = get_authenticated_user()
+    unblocked_by = user.username if user else "admin"
+
+    prev_svc = get_prevention_service()
+    success = prev_svc.unblock_ip(ip=ip, unblocked_by=unblocked_by, reason=reason)
+    return jsonify({"status": "success", "message": f"IP {ip} unblocked successfully", "unblocked": success})
+
+
+@api_soc_bp.route("/prevention/events")
+@login_required
+def prevention_events():
+    limit = request.args.get("limit", 50, type=int)
+    events = HoneypotEventModel.query.filter(
+        HoneypotEventModel.event_type.in_(["rate_limited", "blocked_request", "payload_oversized"])
+    ).order_by(HoneypotEventModel.timestamp.desc()).limit(limit).all()
+
+    items = []
+    for ev in events:
+        items.append({
+            "event_id": ev.event_id,
+            "timestamp": ev.timestamp.isoformat(),
+            "source_ip": ev.source_ip,
+            "endpoint": ev.endpoint,
+            "event_type": ev.event_type,
+            "http_status": ev.http_status,
+            "severity": ev.severity,
+            "payload": ev.payload[:120] if ev.payload else ""
+        })
+    return jsonify({"status": "success", "events": items, "count": len(items)})

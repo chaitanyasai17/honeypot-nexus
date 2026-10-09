@@ -68,6 +68,28 @@ def create_soc_app(config_class=Config):
         response.headers["Content-Security-Policy"] = csp
         return response
 
+    # Reverse proxy handling on Render
+    if getattr(config_class, "TRUST_PROXY_HOPS", 0) > 0:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=config_class.TRUST_PROXY_HOPS, x_proto=1, x_host=1)
+
+    # Attach prevention service
+    from app.services.prevention_service import get_prevention_service
+    app.extensions["prevention_service"] = get_prevention_service()
+
+    # SOC Rate Limit (429) Handler
+    @app.errorhandler(429)
+    def soc_rate_limit_handler(e):
+        client_ip = request.remote_addr or "127.0.0.1"
+        from app.services.audit_service import audit_log
+        audit_log("auth.rate_limited", client_ip, "denied", {
+            "path": request.path,
+            "limit": str(getattr(e, "description", "Rate limit exceeded"))
+        })
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"error": "rate_limited", "message": "Too many requests. Please retry later."}), 429
+        return jsonify({"error": "rate_limited", "message": "Rate limit exceeded. Please wait before retrying."}), 429
+
     # Health check route
     @app.route("/healthz")
     @limiter.exempt
@@ -92,8 +114,9 @@ def create_soc_app(config_class=Config):
     return app
 
 
-def create_honeypot_app(config_class=Config, publisher=None):
+def create_honeypot_app(config_class=Config, publisher=None, prevention_service=None):
     """Creates the untrusted Public Web Honeypot application."""
+    from flask import Response
     # Honeypot app must NOT have DB uri or DB configs
     app = Flask(
         "honeypot_nexus_honeypot",
@@ -105,18 +128,105 @@ def create_honeypot_app(config_class=Config, publisher=None):
     app.config["SECRET_KEY"] = config_class.SECRET_KEY
     app.config["TESTING"] = config_class.TESTING
     app.config["DEMO_MODE"] = config_class.DEMO_MODE
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 # 16 KB max request size
+    app.config["MAX_CONTENT_LENGTH"] = getattr(config_class, "MAX_CONTENT_LENGTH", 64 * 1024)
     app.config["HONEYPOT_RESPONSE_JITTER_MS"] = config_class.HONEYPOT_RESPONSE_JITTER_MS
+    app.config["RATELIMIT_ENABLED"] = getattr(config_class, "RATELIMIT_ENABLED", True)
 
     # Inject publisher facade into app extension dict
     from app.events.publisher import NullPublisher
     app.extensions["event_publisher"] = publisher or NullPublisher()
+
+    # Inject prevention service into app extension dict
+    from app.services.prevention_service import get_prevention_service
+    app.extensions["prevention_service"] = prevention_service or get_prevention_service()
+
+    # Reverse proxy handling on Render
+    if getattr(config_class, "TRUST_PROXY_HOPS", 0) > 0:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=config_class.TRUST_PROXY_HOPS, x_proto=1, x_host=1)
+
+    # Attach limiter to honeypot app
+    limiter.init_app(app)
+
+    # Honeypot Request Prevention Interceptor Hook
+    @app.before_request
+    def honeypot_prevention_filter():
+        # 1. Payload size protection
+        max_bytes = app.config.get("MAX_CONTENT_LENGTH", 64 * 1024)
+        if request.content_length and request.content_length > max_bytes:
+            from app.honeypot.capture import capture_interaction
+            from app.events.schemas import SurfaceType, EventType, EventStatus
+            capture_interaction(
+                surface=SurfaceType.web,
+                event_type=EventType.payload_oversized,
+                status=EventStatus.denied,
+                payload=f"Payload size {request.content_length} bytes exceeds maximum limit {max_bytes} bytes",
+                http_status=413
+            )
+            return Response("413 Payload Too Large - Request entity exceeds maximum permitted size.", status=413, mimetype="text/plain")
+
+        # 2. Temporary Application-Level IP Block Check
+        from app.honeypot.capture import resolve_client_ip
+        client_ip = resolve_client_ip()
+        prev_svc = app.extensions.get("prevention_service")
+        if prev_svc:
+            is_blocked, reason = prev_svc.is_blocked(client_ip)
+            if is_blocked:
+                from app.honeypot.capture import capture_interaction
+                from app.events.schemas import SurfaceType, EventType, EventStatus
+                capture_interaction(
+                    surface=SurfaceType.web,
+                    event_type=EventType.blocked_request,
+                    status=EventStatus.denied,
+                    payload=f"Denied by application block: {reason}",
+                    http_status=403
+                )
+                if request.path.startswith("/api/") or request.is_json:
+                    return jsonify({"error": "forbidden", "message": "Access blocked by Security Operations Center prevention policy."}), 403
+                return Response(f"403 Forbidden - Access blocked by security prevention policy: {reason}", status=403, mimetype="text/plain")
+
+    # Honeypot 429 Rate Limit Handler
+    @app.errorhandler(429)
+    def honeypot_rate_limit_handler(e):
+        from app.honeypot.capture import resolve_client_ip, capture_interaction
+        from app.events.schemas import SurfaceType, EventType, EventStatus
+        client_ip = resolve_client_ip()
+        desc = getattr(e, "description", "Rate limit exceeded")
+        prev_svc = app.extensions.get("prevention_service")
+        if prev_svc:
+            prev_svc.record_rate_limit(client_ip, request.path, desc)
+        capture_interaction(
+            surface=SurfaceType.web,
+            event_type=EventType.rate_limited,
+            status=EventStatus.denied,
+            payload=f"Rate limit exceeded on {request.path}: {desc}",
+            http_status=429
+        )
+        resp = Response("429 Too Many Requests - Excessive interaction rate detected. Access throttled.", status=429, mimetype="text/plain")
+        resp.headers["Retry-After"] = "60"
+        return resp
+
+    # Honeypot 413 Payload Too Large Handler
+    @app.errorhandler(413)
+    def honeypot_oversized_handler(e):
+        from app.honeypot.capture import capture_interaction
+        from app.events.schemas import SurfaceType, EventType, EventStatus
+        capture_interaction(
+            surface=SurfaceType.web,
+            event_type=EventType.payload_oversized,
+            status=EventStatus.denied,
+            payload="HTTP 413 Request entity too large",
+            http_status=413
+        )
+        return Response("413 Payload Too Large - Request entity exceeds maximum permitted size.", status=413, mimetype="text/plain")
 
     # Honeypot security headers hook
     @app.after_request
     def set_honeypot_headers(response):
         response.headers["Server"] = "nginx/1.24.0"
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
     # Register honeypot deception blueprints

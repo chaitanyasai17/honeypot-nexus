@@ -1,0 +1,469 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Attack Prevention — Honeypot Nexus{% endblock %}
+
+{% block content %}
+<div class="hn-page-header">
+  <div>
+    <h1 class="hn-page-title">Application-Level Attack Prevention</h1>
+    <div class="hn-page-sub">Active perimeter defense, real-time rate limiting, brute-force lockout, and autonomous IP containment</div>
+  </div>
+  <div style="display: flex; gap: 8px;">
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadPreventionData();">⟳ Refresh Telemetry</button>
+  </div>
+</div>
+
+<!-- KPI Summary Cards -->
+<div class="hn-kpi-grid">
+  <div class="hn-kpi-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div class="hn-kpi-label">Active Blocked IPs</div>
+        <div class="hn-kpi-val" id="kpiActiveBlocks" style="color: var(--hn-critical);">0</div>
+      </div>
+      <div class="hn-kpi-icon-box" style="background: rgba(255, 69, 69, 0.12); border-color: rgba(255, 69, 69, 0.3); color: var(--hn-critical);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </div>
+    </div>
+    <div class="hn-kpi-sub" id="kpiTotalBlocks">0 total blocked historically</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div class="hn-kpi-label">Brute-Force Lockouts</div>
+        <div class="hn-kpi-val" id="kpiLockouts" style="color: var(--hn-sev-elevated);">0</div>
+      </div>
+      <div class="hn-kpi-icon-box" style="background: rgba(255, 181, 71, 0.12); border-color: rgba(255, 181, 71, 0.3); color: var(--hn-sev-elevated);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+    </div>
+    <div class="hn-kpi-sub">5 failed attempts → 15 min lock</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div class="hn-kpi-label">Rate Limits (24H)</div>
+        <div class="hn-kpi-val" id="kpiRateLimits" style="color: var(--hn-accent);">0</div>
+      </div>
+      <div class="hn-kpi-icon-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+    </div>
+    <div class="hn-kpi-sub">HTTP 429 requests throttled</div>
+  </div>
+
+  <div class="hn-kpi-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <div class="hn-kpi-label">Autonomous Policy</div>
+        <div class="hn-kpi-val" id="kpiAutoStatus" style="color: var(--hn-up); font-size: 20px;">ENFORCING</div>
+      </div>
+      <div class="hn-kpi-icon-box" style="background: rgba(41, 201, 149, 0.12); border-color: rgba(41, 201, 149, 0.3); color: var(--hn-up);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+    </div>
+    <div class="hn-kpi-sub">Risk ≥ 85 or 6+ attacks</div>
+  </div>
+</div>
+
+<div class="hn-grid-12" style="margin-bottom: 24px;">
+  <!-- Left Column: Block Table & Prevention Events (8 cols) -->
+  <div class="hn-col-8" style="display: flex; flex-direction: column; gap: 20px;">
+    
+    <!-- Blocked IPs Panel -->
+    <div class="hn-panel hn-panel-flush">
+      <div class="hn-panel-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="hn-panel-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            Perimeter IP Blocklist
+          </span>
+          <div style="display: flex; gap: 6px;">
+            <button class="hn-btn hn-btn-secondary hn-btn-sm active" id="tabActiveBlocks" onclick="switchBlockTab('active');">Active Blocks</button>
+            <button class="hn-btn hn-btn-secondary hn-btn-sm" id="tabHistoryBlocks" onclick="switchBlockTab('history');">All History</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hn-table-container">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Reason</th>
+              <th>Expires / Duration</th>
+              <th>Blocked By</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="blocksTableBody">
+            <tr><td colspan="6" style="text-align: center; color: var(--hn-text-faint); padding: 28px;">Loading blocked IP entries...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Prevention Interception Feed -->
+    <div class="hn-panel hn-panel-flush">
+      <div class="hn-panel-header">
+        <span class="hn-panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Live Prevention Interceptions (HTTP 403 / 413 / 429)
+        </span>
+        <span style="font-size: 11px; color: var(--hn-text-faint);">Real-time Telemetry</span>
+      </div>
+      <div class="hn-table-container">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th>Timestamp (IST)</th>
+              <th>Source IP</th>
+              <th>Target Endpoint</th>
+              <th>Prevention Action</th>
+              <th>HTTP Code</th>
+              <th>Severity</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody">
+            <tr><td colspan="6" style="text-align: center; color: var(--hn-text-faint); padding: 28px;">Loading prevention events...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column: Manual Block Form & Lockouts & Engine Info (4 cols) -->
+  <div class="hn-col-4" style="display: flex; flex-direction: column; gap: 20px;">
+    
+    <!-- Manual Block Control -->
+    <div class="hn-panel" style="padding: 16px;">
+      <div class="hn-panel-title" style="margin-bottom: 14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Manual IP Containment
+      </div>
+      <p style="font-size: 12px; color: var(--hn-text-dim); margin-bottom: 14px; line-height: 1.4;">
+        Instantly enforce an application-level perimeter block on any suspicious IP. Returning HTTP 403 on all honeypot surfaces.
+      </p>
+
+      <form id="manualBlockForm" onsubmit="handleManualBlock(event);">
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase; margin-bottom: 4px;">Target IP Address</label>
+          <input type="text" id="blockIpInput" class="hn-input" placeholder="e.g. 198.51.100.25" required style="width: 100%; font-family: var(--hn-mono); font-size: 13px;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase; margin-bottom: 4px;">Containment Duration</label>
+          <select id="blockDurationSelect" class="hn-select" style="width: 100%;">
+            <option value="15">15 Minutes</option>
+            <option value="30" selected>30 Minutes (Standard)</option>
+            <option value="60">1 Hour</option>
+            <option value="360">6 Hours</option>
+            <option value="1440">24 Hours</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase; margin-bottom: 4px;">Containment Justification</label>
+          <input type="text" id="blockReasonInput" class="hn-input" placeholder="e.g. Critical injection attack sequence" value="Manual block by SOC operator" style="width: 100%;">
+        </div>
+
+        <button type="submit" id="blockSubmitBtn" class="hn-btn hn-btn-danger" style="width: 100%; font-weight: 700;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Enforce IP Block
+        </button>
+      </form>
+
+      <div style="margin-top: 12px; padding: 10px; background: rgba(255, 87, 34, 0.06); border: 1px solid rgba(255, 87, 34, 0.2); border-radius: 6px; font-size: 11px; color: var(--hn-text-dim); line-height: 1.4;">
+        <strong style="color: var(--hn-accent);">Safe Guards Active:</strong> Localhost (127.0.0.1, ::1) and administrator whitelists cannot be blocked under any condition.
+      </div>
+    </div>
+
+    <!-- Active Lockouts Panel -->
+    <div class="hn-panel" style="padding: 16px;">
+      <div class="hn-panel-title" style="margin-bottom: 12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Authentication Lockouts
+      </div>
+      <div id="lockoutsList" style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 12px; color: var(--hn-text-faint); padding: 8px 0;">No accounts currently locked out.</div>
+      </div>
+    </div>
+
+    <!-- Prevention Architecture Spec -->
+    <div class="hn-panel" style="padding: 16px;">
+      <div class="hn-panel-title" style="margin-bottom: 12px;">Prevention Policy Reference</div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.6;">
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Honeypot General Limit</td>
+            <td class="mono" style="text-align: right; color: var(--hn-text);">{{ config.get('RATE_LIMIT_HONEYPOT', '60 per minute') }}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Login Rate Limit</td>
+            <td class="mono" style="text-align: right; color: var(--hn-text);">{{ config.get('RATE_LIMIT_LOGIN', '5 per minute') }}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Sensitive APIs / Shell</td>
+            <td class="mono" style="text-align: right; color: var(--hn-text);">{{ config.get('RATE_LIMIT_EXPENSIVE', '15 per minute') }}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Auth Lockout Threshold</td>
+            <td class="mono" style="text-align: right; color: var(--hn-text);">{{ config.get('AUTH_LOCKOUT_THRESHOLD', 5) }} fails / {{ config.get('AUTH_LOCKOUT_DURATION_MINUTES', 15) }}m</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Autonomous Block Trigger</td>
+            <td class="mono" style="text-align: right; color: var(--hn-accent);">Risk ≥ {{ config.get('AUTO_BLOCK_RISK_THRESHOLD', 85) }} / {{ config.get('AUTO_BLOCK_ATTACK_COUNT', 6) }} attacks</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--hn-border);">
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Max Request Payload</td>
+            <td class="mono" style="text-align: right; color: var(--hn-text);">{{ config.get('MAX_CONTENT_LENGTH_KB', 64) }} KB (413 Guard)</td>
+          </tr>
+          <tr>
+            <td style="color: var(--hn-text-dim); padding: 4px 0;">Security Headers</td>
+            <td class="mono" style="text-align: right; color: var(--hn-up);">Active (CSP, XFO, HSTS)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { API } from "{{ url_for('static', filename='js/core/api.js') }}";
+  import { esc, showToast } from "{{ url_for('static', filename='js/core/ui.js') }}";
+  import { formatDateTime } from "{{ url_for('static', filename='js/core/format.js') }}";
+
+  let currentBlockTab = 'active';
+
+  window.switchBlockTab = function(tab) {
+    currentBlockTab = tab;
+    if (tab === 'active') {
+      document.getElementById('tabActiveBlocks').classList.add('hn-btn-primary');
+      document.getElementById('tabActiveBlocks').classList.remove('hn-btn-secondary');
+      document.getElementById('tabHistoryBlocks').classList.remove('hn-btn-primary');
+      document.getElementById('tabHistoryBlocks').classList.add('hn-btn-secondary');
+    } else {
+      document.getElementById('tabHistoryBlocks').classList.add('hn-btn-primary');
+      document.getElementById('tabHistoryBlocks').classList.remove('hn-btn-secondary');
+      document.getElementById('tabActiveBlocks').classList.remove('hn-btn-primary');
+      document.getElementById('tabActiveBlocks').classList.add('hn-btn-secondary');
+    }
+    loadBlockTable();
+  };
+
+  window.loadPreventionData = async function() {
+    try {
+      const overview = await API.getPreventionOverview();
+      const stats = overview.stats || {};
+      
+      document.getElementById('kpiActiveBlocks').textContent = stats.active_blocks ?? 0;
+      document.getElementById('kpiTotalBlocks').textContent = `${stats.total_blocks ?? 0} total blocked historically`;
+      document.getElementById('kpiLockouts').textContent = stats.active_lockouts ?? 0;
+      document.getElementById('kpiRateLimits').textContent = stats.rate_limited_24h ?? 0;
+      
+      const autoEl = document.getElementById('kpiAutoStatus');
+      if (stats.auto_block_enabled) {
+        autoEl.textContent = 'ENFORCING';
+        autoEl.style.color = 'var(--hn-up)';
+      } else {
+        autoEl.textContent = 'MONITOR ONLY';
+        autoEl.style.color = 'var(--hn-sev-elevated)';
+      }
+
+      // Render Active Lockouts
+      renderLockouts(overview.active_lockouts || []);
+
+      // Load block table according to current tab
+      await loadBlockTable();
+
+      // Load prevention events
+      await loadPreventionEvents();
+
+    } catch (err) {
+      console.error('Failed to load prevention overview:', err);
+      showToast('Error', err.message || 'Could not load prevention telemetry', 'critical');
+    }
+  };
+
+  async function loadBlockTable() {
+    const tbody = document.getElementById('blocksTableBody');
+    try {
+      if (currentBlockTab === 'active') {
+        const overview = await API.getPreventionOverview();
+        const active = overview.active_blocks || [];
+        if (!active.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--hn-text-faint); padding:28px;">No active IP blocks at this moment. The perimeter is clear.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = active.map(b => `
+          <tr>
+            <td class="mono" style="font-weight:700; color:var(--hn-critical);">${esc(b.ip)}</td>
+            <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis;" title="${esc(b.reason)}">${esc(b.reason)}</td>
+            <td class="mono" style="font-size:12px;">
+              <span style="color:var(--hn-sev-elevated);">${b.remaining_minutes > 0 ? b.remaining_minutes + ' min left' : b.remaining_seconds + 's left'}</span>
+              <div style="font-size:10px; color:var(--hn-text-faint);">${formatDateTime(b.expires_at)}</div>
+            </td>
+            <td style="font-size:12px;">${esc(b.blocked_by || 'autonomous_policy')}</td>
+            <td>
+              <span class="hn-badge hn-badge-critical">BLOCKED</span>
+            </td>
+            <td style="text-align:right;">
+              <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="handleUnblock('${esc(b.ip)}')">Unblock</button>
+            </td>
+          </tr>
+        `).join('');
+
+      } else {
+        const res = await API.getPreventionBlocks({ page: 1, per_page: 50 });
+        const items = res.items || [];
+        if (!items.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--hn-text-faint); padding:28px;">No historical blocks recorded.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = items.map(b => {
+          let statusBadge = '<span class="hn-badge hn-badge-critical">BLOCKED</span>';
+          if (b.unblocked_at) {
+            statusBadge = '<span class="hn-badge hn-badge-normal">UNBLOCKED</span>';
+          } else if (!b.is_active) {
+            statusBadge = '<span class="hn-badge hn-badge-dim">EXPIRED</span>';
+          }
+
+          const actionBtn = b.is_active 
+            ? `<button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="handleUnblock('${esc(b.ip)}')">Unblock</button>` 
+            : `<span style="font-size:11px; color:var(--hn-text-faint);">Archived</span>`;
+
+          return `
+            <tr>
+              <td class="mono" style="font-weight:700;">${esc(b.ip)}</td>
+              <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis;" title="${esc(b.reason)}">${esc(b.reason)}</td>
+              <td class="mono" style="font-size:12px;">
+                ${b.is_active ? (b.remaining_seconds > 60 ? Math.round(b.remaining_seconds/60) + ' min left' : b.remaining_seconds + 's left') : 'Expired'}
+                <div style="font-size:10px; color:var(--hn-text-faint);">${formatDateTime(b.expires_at)}</div>
+              </td>
+              <td style="font-size:12px;">${esc(b.blocked_by || 'system')}</td>
+              <td>${statusBadge}</td>
+              <td style="text-align:right;">${actionBtn}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--hn-critical); padding:20px;">Failed to load blocks: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderLockouts(lockouts) {
+    const box = document.getElementById('lockoutsList');
+    if (!lockouts.length) {
+      box.innerHTML = '<div style="font-size:12px; color:var(--hn-text-faint); padding:8px 0;">No accounts currently locked out.</div>';
+      return;
+    }
+
+    box.innerHTML = lockouts.map(l => `
+      <div style="background:var(--hn-bg-2); padding:10px; border-radius:6px; border:1px solid var(--hn-border); display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="mono" style="font-size:12px; font-weight:700; color:var(--hn-sev-elevated);">${esc(l.key)}</div>
+          <div style="font-size:11px; color:var(--hn-text-faint); margin-top:2px;">${esc(l.failed_attempts)} failed attempts recorded</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="mono" style="font-size:11px; color:var(--hn-critical); font-weight:700;">${esc(l.remaining_minutes)}m lock</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function loadPreventionEvents() {
+    const tbody = document.getElementById('eventsTableBody');
+    try {
+      const res = await API.getPreventionEvents(30);
+      const evs = res.events || [];
+      if (!evs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--hn-text-faint); padding:28px;">No prevention events recorded in the current window.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = evs.map(e => {
+        let badgeColor = 'var(--hn-accent)';
+        let actionDesc = 'Rate Limit Throttled';
+        if (e.event_type === 'blocked_request') {
+          badgeColor = 'var(--hn-critical)';
+          actionDesc = 'Active Block Enforced';
+        } else if (e.event_type === 'payload_oversized') {
+          badgeColor = 'var(--hn-sev-high)';
+          actionDesc = 'Payload Size Guard';
+        }
+
+        return `
+          <tr>
+            <td class="mono" style="font-size:12px;">${formatDateTime(e.timestamp)}</td>
+            <td class="mono" style="font-weight:600;">${esc(e.source_ip)}</td>
+            <td class="mono" style="font-size:12px; color:var(--hn-text-dim);">${esc(e.endpoint)}</td>
+            <td>
+              <span style="font-size:12px; font-weight:600; color:${badgeColor};">${actionDesc}</span>
+            </td>
+            <td class="mono" style="font-weight:700; color:${e.http_status === 403 ? 'var(--hn-critical)' : 'var(--hn-accent)'};">${e.http_status}</td>
+            <td>
+              <span class="hn-badge hn-badge-${(e.severity || 'low').toLowerCase()}">${esc(e.severity)}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--hn-critical); padding:20px;">Failed to load events: ${esc(err.message)}</td></tr>`;
+    }
+  }
+
+  window.handleManualBlock = async function(evt) {
+    evt.preventDefault();
+    const btn = document.getElementById('blockSubmitBtn');
+    const ip = document.getElementById('blockIpInput').value.trim();
+    const duration = parseInt(document.getElementById('blockDurationSelect').value, 10);
+    const reason = document.getElementById('blockReasonInput').value.trim();
+
+    if (!ip) {
+      showToast('Validation Error', 'Please enter an IP address.', 'high');
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.textContent = 'Enforcing...';
+      const res = await API.blockIp({ ip, duration_minutes: duration, reason });
+      showToast('Perimeter Enforced', res.message || `IP ${ip} has been blocked.`, 'normal');
+      document.getElementById('blockIpInput').value = '';
+      loadPreventionData();
+    } catch (err) {
+      showToast('Block Failed', err.message, 'critical');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        Enforce IP Block
+      `;
+    }
+  };
+
+  window.handleUnblock = async function(ip) {
+    if (!confirm(`Are you sure you want to lift the perimeter block on ${ip}?`)) {
+      return;
+    }
+    try {
+      const res = await API.unblockIp({ ip, reason: 'Manually unblocked by SOC operator' });
+      showToast('Block Lifted', `IP ${ip} has been unblocked.`, 'normal');
+      loadPreventionData();
+    } catch (err) {
+      showToast('Unblock Failed', err.message, 'critical');
+    }
+  };
+
+  // Initial load
+  loadPreventionData();
+</script>
+{% endblock %}

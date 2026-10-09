@@ -324,3 +324,26 @@ class HoneypotConfig(db.Model):
     description = sa.Column(sa.String(256), nullable=True)
     updated_by = sa.Column(sa.Integer, nullable=True)
     updated_at = sa.Column(sa.DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
+# ---------------------------------------------------------
+# 12. blocked_ips (Attack Prevention Layer)
+# ---------------------------------------------------------
+class BlockedIP(db.Model):
+    __tablename__ = "blocked_ips"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    ip = sa.Column(sa.String(64), nullable=False, index=True)
+    reason = sa.Column(sa.String(256), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utc_now, nullable=False)
+    expires_at = sa.Column(sa.DateTime(timezone=True), nullable=False, index=True)
+    blocked_by = sa.Column(sa.String(64), default="system", nullable=False) # system, auto_prevention, username
+    event_id = sa.Column(sa.String(64), nullable=True)
+    is_active = sa.Column(sa.Boolean, default=True, nullable=False, index=True)
+    unblocked_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    unblock_reason = sa.Column(sa.String(256), nullable=True)
+    unblocked_by = sa.Column(sa.String(64), nullable=True)
+
+    __table_args__ = (
+        sa.Index("ix_blocked_ip_active_exp", "ip", "is_active", "expires_at"),
+    )

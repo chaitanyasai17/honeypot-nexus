@@ -58,6 +58,8 @@ class EventType(str, Enum):
     robots_fetch = "robots_fetch"
     not_found = "not_found"
     rate_limited = "rate_limited"
+    blocked_request = "blocked_request"
+    payload_oversized = "payload_oversized"
 
 
 class EventStatus(str, Enum):

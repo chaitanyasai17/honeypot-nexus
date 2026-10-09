@@ -193,6 +193,14 @@ class EventProcessor:
                 from app.services.alert_service import evaluate_and_create_alerts
                 alerts_raised = evaluate_and_create_alerts(event_model, session, detections)
 
+                # 8b. Stage: Attack Prevention Policy Evaluation
+                from app.services.prevention_service import get_prevention_service
+                prev_svc = self.app.extensions.get("prevention_service") or get_prevention_service()
+                try:
+                    prev_svc.evaluate_event_for_prevention(event_model, session, detections)
+                except Exception as prev_err:
+                    logger.warning(f"Prevention policy evaluation notice: {prev_err}")
+
                 # Commit transaction before broadcasting
                 db.session.commit()
 

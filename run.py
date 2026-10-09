@@ -45,9 +45,15 @@ def main():
     # Attach event bus to soc_app
     soc_app.extensions["event_bus"] = event_bus
 
+    from app.services.prevention_service import get_prevention_service
+    prevention_service = get_prevention_service()
+    soc_app.extensions["prevention_service"] = prevention_service
+
     with soc_app.app_context():
         # Ensure database tables exist
         db.create_all()
+        # Load persistent active IP blocks into in-memory prevention store
+        prevention_service.load_active_blocks_from_db()
         # Seed default configurations
         seed_default_configs()
         # Seed evaluation administrator idempotently
@@ -64,7 +70,7 @@ def main():
 
     # 4. Build Untrusted Honeypot Application with isolated publisher facade
     publisher = event_bus.publisher()
-    honeypot_app = create_honeypot_app(Config, publisher=publisher)
+    honeypot_app = create_honeypot_app(Config, publisher=publisher, prevention_service=prevention_service)
 
     # 5. Start dedicated Honeypot server if running on distinct port
     if Config.HONEYPOT_PORT != Config.DASHBOARD_PORT:
