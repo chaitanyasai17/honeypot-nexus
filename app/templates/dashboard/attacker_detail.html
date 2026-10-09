@@ -55,13 +55,13 @@
       <div style="font-size: 11px; font-weight: 700; color: var(--hn-text-faint); text-transform: uppercase;">Network Indicators</div>
       <div style="margin-top: 8px; display: flex; gap: 8px;">
         {% if profile.vpn_detected %}
-        <span style="background: rgba(230, 180, 34, 0.2); color: var(--hn-sev-elevated); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">VPN SUSPECTED</span>
+        <span style="background: var(--hn-sev-elevated-bg); color: var(--hn-sev-elevated); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">VPN SUSPECTED</span>
         {% endif %}
         {% if profile.tor_detected %}
-        <span style="background: rgba(239, 70, 85, 0.2); color: var(--hn-critical); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">TOR EXIT NODE</span>
+        <span style="background: var(--hn-sev-critical-bg); color: var(--hn-critical); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">TOR EXIT NODE</span>
         {% endif %}
         {% if not profile.vpn_detected and not profile.tor_detected %}
-        <span style="background: rgba(63, 182, 139, 0.2); color: var(--hn-sev-normal); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">STANDARD IP</span>
+        <span style="background: var(--hn-sev-normal-bg); color: var(--hn-sev-normal); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">STANDARD IP</span>
         {% endif %}
       </div>
       <div style="font-size: 11px; color: var(--hn-text-dim); margin-top: 8px;">Primary: {{ profile.top_attack_type }}</div>

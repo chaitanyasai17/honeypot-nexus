@@ -5,43 +5,43 @@
 {% block head %}
 <style>
   .terminal-window {
-    background: #090d16;
-    border: 1px solid #1e293b;
+    background: #080B12;
+    border: 1px solid var(--border);
     border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 32px rgba(0,0,0,0.6);
     overflow: hidden;
     font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
   }
   .terminal-topbar {
-    background: #111827;
+    background: #0D111B;
     padding: 8px 16px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #1f2937;
+    border-bottom: 1px solid var(--border);
   }
   .terminal-dots { display: flex; gap: 6px; margin-right: 16px; }
   .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .terminal-title { color: #9ca3af; font-size: 12px; font-weight: 500; }
+  .terminal-title { color: var(--text-muted); font-size: 12px; font-weight: 500; }
   .terminal-screen {
     padding: 16px;
     height: 480px;
     overflow-y: auto;
-    color: #e2e8f0;
+    color: var(--text);
     font-size: 13px;
     line-height: 1.4;
   }
-  .prompt-text { color: #22c55e; font-weight: 700; margin-right: 8px; }
+  .prompt-text { color: #29C995; font-weight: 700; margin-right: 8px; }
   .command-line-wrapper { display: flex; align-items: center; margin-top: 4px; }
   .terminal-input {
     background: transparent;
     border: none;
     outline: none;
-    color: #f8fafc;
+    color: var(--text);
     font-family: inherit;
     font-size: 13px;
     flex-grow: 1;
   }
-  .output-block { white-space: pre-wrap; word-break: break-all; margin: 4px 0 8px; color: #cbd5e1; }
+  .output-block { white-space: pre-wrap; word-break: break-all; margin: 4px 0 8px; color: var(--text-muted); }
 </style>
 {% endblock %}
 

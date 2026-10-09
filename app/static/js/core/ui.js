@@ -111,7 +111,7 @@ export async function openEventDetail(id) {
         <div>
           <div style="font-size:11px; font-weight:700; color:var(--hn-text-faint); text-transform:uppercase; margin-bottom:6px;">Detection Rules Triggered</div>
           ${ev.detections && ev.detections.length ? ev.detections.map(d => `
-            <div style="background:rgba(239,70,85,0.08); border:1px solid rgba(239,70,85,0.2); padding:10px; border-radius:6px; margin-bottom:8px;">
+            <div style="background:var(--hn-sev-critical-bg); border:1px solid rgba(255,69,69,0.22); padding:10px; border-radius:6px; margin-bottom:8px;">
               <div style="font-weight:700; font-size:13px; color:var(--hn-critical);">${esc(d.rule_id)}: ${esc(d.attack_type)} (+${d.points} pts)</div>
               <div style="font-size:12px; color:var(--hn-text-dim); margin-top:2px;">${esc(d.reason)}</div>
             </div>

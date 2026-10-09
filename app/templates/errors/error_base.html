@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <title>{{ code or 'Error' }} — Honeypot Nexus</title>
   <style>
-    body { background: #0a0e17; color: #e6ebf5; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
-    .box { background: #0f1523; border: 1px solid #232c42; border-radius: 12px; padding: 40px; max-width: 480px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
-    h1 { font-size: 56px; margin: 0 0 12px; color: #ef4655; font-weight: 800; font-family: monospace; }
+    body { background: #080B12; background-image: radial-gradient(ellipse at 50% 30%, rgba(255, 87, 34, 0.06) 0%, transparent 60%); color: #F4F6FA; font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }
+    .box { background: #0D111B; border: 1px solid #283142; border-top: 2px solid #FF5722; border-radius: 12px; padding: 40px; max-width: 480px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }
+    h1 { font-size: 56px; margin: 0 0 12px; color: #FF4545; font-weight: 800; font-family: monospace; }
     h2 { font-size: 20px; margin: 0 0 12px; }
-    p { color: #9aa6bf; font-size: 14px; margin-bottom: 24px; }
-    a { display: inline-block; background: #4c8dff; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    p { color: #A3ADBD; font-size: 14px; margin-bottom: 24px; }
+    a { display: inline-block; background: #FF5722; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; transition: background 0.15s ease; }
+    a:hover { background: #E64A19; }
   </style>
 </head>
 <body>
@@ -17,7 +18,7 @@
     <h1>{{ code }}</h1>
     <h2>{{ title }}</h2>
     <p>{{ message }}</p>
-    {% if request_id %}<p style="font-family: monospace; font-size: 11px; color: #67738f;">Trace ID: {{ request_id }}</p>{% endif %}
+    {% if request_id %}<p style="font-family: monospace; font-size: 11px; color: #6A7589;">Trace ID: {{ request_id }}</p>{% endif %}
     <a href="/dashboard/">Return to SOC Overview</a>
   </div>
 </body>

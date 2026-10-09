@@ -65,8 +65,8 @@
           <td class="mono">${p.total_sessions}</td>
           <td class="mono">${p.total_events}</td>
           <td>
-            ${p.vpn_detected ? '<span style="color:#d97706; font-size:11px; font-weight:700; margin-right:4px;">VPN</span>' : ''}
-            ${p.tor_detected ? '<span style="color:#ef4655; font-size:11px; font-weight:700;">TOR</span>' : ''}
+            ${p.vpn_detected ? '<span style="color:var(--hn-sev-elevated); font-size:11px; font-weight:700; margin-right:4px;">VPN</span>' : ''}
+            ${p.tor_detected ? '<span style="color:var(--hn-critical); font-size:11px; font-weight:700;">TOR</span>' : ''}
             ${!p.vpn_detected && !p.tor_detected ? '<span style="color:var(--hn-text-faint); font-size:11px;">CLEAN</span>' : ''}
           </td>
           <td class="mono">${formatDateTime(p.last_seen)}</td>

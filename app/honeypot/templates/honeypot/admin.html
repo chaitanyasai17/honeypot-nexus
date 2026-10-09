@@ -12,7 +12,7 @@
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px;">
         {% for s in sections %}
-        <a href="/admin/{{ s }}" style="padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{ 'var(--primary)' if section == s else '#334155' }}; background: {{ '#eff6ff' if section == s else 'transparent' }};">
+        <a href="/admin/{{ s }}" style="padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{ 'var(--primary)' if section == s else 'var(--text-muted)' }}; background: {{ 'rgba(255, 87, 34, 0.15)' if section == s else 'transparent' }};">
           {{ s.replace('_', ' ').title() }}
         </a>
         {% endfor %}
@@ -25,7 +25,7 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
         <div>
-          <h2 style="font-size: 18px; font-weight: 700; color: #1e293b;">{{ section.replace('_', ' ').title() }} Management</h2>
+          <h2 style="font-size: 18px; font-weight: 700; color: var(--text);">{{ section.replace('_', ' ').title() }} Management</h2>
           <p style="font-size: 13px; color: var(--text-muted);">SecureCorp Production Cluster (Node: sc-web-01)</p>
         </div>
         <form method="POST" action="/admin/{{ section }}">
@@ -41,20 +41,20 @@
 
       {% if section == "overview" %}
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
-          <div style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="background: #111722; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
             <div style="font-size: 12px; color: var(--text-muted);">Registered Users</div>
-            <div style="font-size: 24px; font-weight: 700;">142</div>
+            <div style="font-size: 24px; font-weight: 700; color: var(--text);">142</div>
           </div>
-          <div style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="background: #111722; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
             <div style="font-size: 12px; color: var(--text-muted);">Cluster Status</div>
-            <div style="font-size: 24px; font-weight: 700; color: #16a34a;">Healthy</div>
+            <div style="font-size: 24px; font-weight: 700; color: #29C995;">Healthy</div>
           </div>
-          <div style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="background: #111722; padding: 16px; border-radius: 6px; border: 1px solid var(--border);">
             <div style="font-size: 12px; color: var(--text-muted);">Pending Security Patches</div>
-            <div style="font-size: 24px; font-weight: 700; color: #d97706;">2</div>
+            <div style="font-size: 24px; font-weight: 700; color: #FFB547;">2</div>
           </div>
         </div>
-        <p style="font-size: 14px; color: #334155;">Select an administrative module from the left menu to manage cluster services, users, and backup schedules.</p>
+        <p style="font-size: 14px; color: var(--text-muted);">Select an administrative module from the left menu to manage cluster services, users, and backup schedules.</p>
 
       {% elif section == "users" %}
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -88,7 +88,7 @@
         </ul>
 
       {% else %}
-        <p style="font-size: 14px; color: #334155;">Synthetic administrative console for <strong>{{ section }}</strong>.</p>
+        <p style="font-size: 14px; color: var(--text-muted);">Synthetic administrative console for <strong>{{ section }}</strong>.</p>
         <form method="POST" style="margin-top: 16px;">
           <input type="hidden" name="action" value="update_settings">
           <input type="hidden" name="target" value="{{ section }}">

@@ -19,7 +19,7 @@
   .hn-map-canvas-container {
     flex: 1;
     position: relative;
-    background: #060913;
+    background: #080B12;
     border: 1px solid var(--hn-border);
     border-radius: 8px;
     overflow: hidden;
@@ -29,17 +29,17 @@
   #fullAttackMap {
     width: 100%;
     height: 100%;
-    background: #060913 !important;
+    background: #080B12 !important;
   }
 
   /* Hide default Leaflet attribution banner styles to keep dark aesthetic */
   .leaflet-container {
-    background: #060913 !important;
+    background: #080B12 !important;
     font-family: var(--hn-font) !important;
   }
 
   .leaflet-control-attribution {
-    background: rgba(10, 14, 23, 0.8) !important;
+    background: rgba(8, 11, 18, 0.85) !important;
     color: var(--hn-text-faint) !important;
     font-size: 10px !important;
     border-radius: 4px;
@@ -54,9 +54,9 @@
   }
 
   .hn-country-tooltip {
-    background: rgba(15, 21, 35, 0.95) !important;
+    background: rgba(13, 17, 27, 0.95) !important;
     border: 1px solid var(--hn-border-strong) !important;
-    color: #e2e8f0 !important;
+    color: #F4F6FA !important;
     font-size: 11px !important;
     font-weight: 600 !important;
     border-radius: 4px !important;
@@ -231,9 +231,9 @@
   }
 
   .hn-style-opt.active {
-    background: rgba(76, 141, 255, 0.16);
-    color: #e6ebf5;
-    border-color: rgba(76, 141, 255, 0.4);
+    background: var(--hn-accent-weak);
+    color: var(--hn-text);
+    border-color: rgba(255, 87, 34, 0.4);
   }
 
   .hn-style-opt .cyber-radio {
@@ -244,8 +244,8 @@
   }
 
   .hn-style-opt.active .cyber-radio {
-    color: #38bdf8;
-    text-shadow: 0 0 6px #38bdf8;
+    color: var(--hn-accent);
+    text-shadow: 0 0 6px var(--hn-accent);
   }
 
   .hn-style-opt .style-icon {
@@ -254,9 +254,9 @@
 
   /* Overlay Feature Toggles */
   .hn-toggle-pill-group {
-    background: rgba(15, 21, 35, 0.9);
+    background: rgba(13, 17, 27, 0.9);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(45, 60, 95, 0.65);
+    border: 1px solid var(--hn-border);
     border-radius: 6px;
     padding: 4px;
     display: flex;
@@ -287,9 +287,9 @@
   }
 
   .hn-toggle-btn.active {
-    background: rgba(76, 141, 255, 0.18);
+    background: var(--hn-accent-weak);
     color: var(--hn-accent);
-    border-color: rgba(76, 141, 255, 0.4);
+    border-color: rgba(255, 87, 34, 0.4);
   }
 
   .hn-toggle-btn .led {
@@ -302,8 +302,8 @@
   }
 
   .hn-toggle-btn.active .led {
-    background: #38bdf8;
-    box-shadow: 0 0 8px #38bdf8;
+    background: var(--hn-accent);
+    box-shadow: 0 0 8px var(--hn-accent);
   }
 
   /* -------------------------------------------------------------------------
@@ -424,31 +424,31 @@
   }
 
   .attacker-core.sev-critical {
-    background: #ef4444;
-    color: #ef4444;
+    background: #FF4545;
+    color: #FF4545;
     border-color: #fee2e2;
-    box-shadow: 0 0 14px rgba(239, 68, 68, 0.95);
+    box-shadow: 0 0 14px rgba(255, 69, 69, 0.95);
   }
 
   .attacker-core.sev-high {
-    background: #f97316;
-    color: #f97316;
+    background: #FF7043;
+    color: #FF7043;
     border-color: #ffedd5;
-    box-shadow: 0 0 12px rgba(249, 115, 22, 0.9);
+    box-shadow: 0 0 12px rgba(255, 112, 67, 0.9);
   }
 
   .attacker-core.sev-elevated {
-    background: #fbbf24;
-    color: #fbbf24;
+    background: #FFB547;
+    color: #FFB547;
     border-color: #fef3c7;
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.85);
+    box-shadow: 0 0 10px rgba(255, 181, 71, 0.85);
   }
 
   .attacker-core.sev-low {
-    background: #00e5ff;
-    color: #00e5ff;
-    border-color: #cffafe;
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.85);
+    background: #29C995;
+    color: #29C995;
+    border-color: #d1fae5;
+    box-shadow: 0 0 10px rgba(41, 201, 149, 0.85);
   }
 
   /* -------------------------------------------------------------------------
@@ -582,8 +582,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #ef4444;
-    box-shadow: 0 0 10px #ef4444;
+    background: #FF4545;
+    box-shadow: 0 0 10px #FF4545;
     animation: radarBlink 1.4s ease-in-out infinite;
   }
 
@@ -1052,9 +1052,9 @@
 
       vectorLayer = L.geoJSON(geojson, {
         style: {
-          fillColor: '#0f172a',
+          fillColor: '#0D111B',
           fillOpacity: 0.95,
-          color: '#1e293b',
+          color: '#283142',
           weight: 0.75
         },
         onEachFeature: (feature, layer) => {
@@ -1062,8 +1062,8 @@
             mouseover: (e) => {
               if (activeMapStyle === 'cyber') {
                 e.target.setStyle({
-                  fillColor: '#1e293b',
-                  color: '#38bdf8',
+                  fillColor: '#171D29',
+                  color: '#FF5722',
                   weight: 1.2
                 });
               }
@@ -1210,7 +1210,7 @@
 
       const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
 
-      const sevColor = p.severity === 'CRITICAL' ? '#ef4444' : p.severity === 'HIGH' ? '#f97316' : p.severity === 'ELEVATED' ? '#fbbf24' : '#00e5ff';
+      const sevColor = p.severity === 'CRITICAL' ? '#FF4545' : p.severity === 'HIGH' ? '#FF7043' : p.severity === 'ELEVATED' ? '#FFB547' : '#29C995';
 
       const popupHtml = `
         <div class="hn-popup-header">
@@ -1295,7 +1295,7 @@
       const lng2 = targetLocation.lng;
 
       const curvePoints = generateArcPoints(lat1, lng1, lat2, lng2, 24);
-      const sevColor = p.severity === 'CRITICAL' ? '#ef4444' : p.severity === 'HIGH' ? '#f97316' : p.severity === 'ELEVATED' ? '#fbbf24' : '#00e5ff';
+      const sevColor = p.severity === 'CRITICAL' ? '#FF4545' : p.severity === 'HIGH' ? '#FF7043' : p.severity === 'ELEVATED' ? '#FFB547' : '#29C995';
 
       // 1. Static base glow path
       const baseLine = L.polyline(curvePoints, {
@@ -1355,7 +1355,7 @@
     heatmapLayer = L.layerGroup();
     currentPoints.forEach(p => {
       const radius = Math.min(600000, Math.max(200000, p.attack_count * 25000));
-      const color = p.max_risk >= 80 ? '#ef4444' : p.max_risk >= 60 ? '#f97316' : '#00e5ff';
+      const color = p.max_risk >= 80 ? '#FF4545' : p.max_risk >= 60 ? '#FF7043' : '#29C995';
 
       const heatCircle = L.circle([p.lat, p.lng], {
         radius: radius,
@@ -1402,7 +1402,7 @@
             ${sevBadge}
             <span style="font-weight:700; color:var(--hn-text); font-size:12px;">${esc(p.top_attack || 'Probe')}</span>
           </div>
-          <span style="font-size:11px; font-weight:700; color:${p.max_risk >= 80 ? '#ef4444' : '#f97316'}; font-family:var(--hn-mono);">
+          <span style="font-size:11px; font-weight:700; color:${p.max_risk >= 80 ? '#FF4545' : '#FF7043'}; font-family:var(--hn-mono);">
             Risk ${p.max_risk}
           </span>
         </div>

@@ -10,40 +10,40 @@
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 20px;">
-    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+    <div style="background: #111722; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
       <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-        <span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
-        <code style="font-size: 14px; font-weight: 600;">/api/v1/users</code>
+        <span style="background: #29C995; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600; color: var(--text);">/api/v1/users</code>
       </div>
       <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">List active corporate employees and identity directory.</p>
-      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/users</pre>
+      <pre style="background: #080B12; border: 1px solid var(--border); color: #FF8A65; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/users</pre>
     </div>
 
-    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+    <div style="background: #111722; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
       <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-        <span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
-        <code style="font-size: 14px; font-weight: 600;">/api/v1/config</code>
+        <span style="background: #29C995; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600; color: var(--text);">/api/v1/config</code>
       </div>
       <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Retrieve staging configuration parameters and database host settings.</p>
-      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/config</pre>
+      <pre style="background: #080B12; border: 1px solid var(--border); color: #FF8A65; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/config</pre>
     </div>
 
-    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+    <div style="background: #111722; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
       <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-        <span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
-        <code style="font-size: 14px; font-weight: 600;">/api/v1/tokens</code>
+        <span style="background: #29C995; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600; color: var(--text);">/api/v1/tokens</code>
       </div>
       <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Fetch service access tokens (requires Bearer authorization header).</p>
-      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s -H "Authorization: Bearer test_token" http://127.0.0.1:8080/api/v1/tokens</pre>
+      <pre style="background: #080B12; border: 1px solid var(--border); color: #FF8A65; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s -H "Authorization: Bearer test_token" http://127.0.0.1:8080/api/v1/tokens</pre>
     </div>
 
-    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+    <div style="background: #111722; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
       <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-        <span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
-        <code style="font-size: 14px; font-weight: 600;">/api/v1/admin</code>
+        <span style="background: #FF4545; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">GET</span>
+        <code style="font-size: 14px; font-weight: 600; color: var(--text);">/api/v1/admin</code>
       </div>
       <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Restricted administrative controller interface.</p>
-      <pre style="background: #0f172a; color: #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/admin</pre>
+      <pre style="background: #080B12; border: 1px solid var(--border); color: #FF8A65; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">curl -s http://127.0.0.1:8080/api/v1/admin</pre>
     </div>
   </div>
 </div>

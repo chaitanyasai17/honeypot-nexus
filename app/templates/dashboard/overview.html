@@ -130,7 +130,7 @@
         <a href="/dashboard/map" style="font-size: 11px; font-weight: 600;">Full Map &rarr;</a>
       </div>
       <div class="hn-panel-body" style="height: 260px; padding: 0;">
-        <div id="overviewMap" style="height: 100%; width: 100%; background: #0f1523;"></div>
+        <div id="overviewMap" style="height: 100%; width: 100%; background: #0D111B;"></div>
       </div>
     </div>
   </div>
@@ -271,8 +271,8 @@
         datasets: [{
           data: data.length ? data : [1],
           backgroundColor: data.length ? [
-            '#ef4655', '#f08a24', '#e6b422', '#4c8dff', '#35c2d6', '#a78bfa', '#f472b6', '#3fb68b'
-          ] : ['#1f2937'],
+            '#FF5722', '#FF8A65', '#FFB547', '#FF7043', '#FF3D3D', '#FF6B35', '#29C995', '#8A9BB5'
+          ] : ['#171D29'],
           borderWidth: 0
         }]
       },
@@ -280,7 +280,7 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#9aa6bf', font: { size: 10 } } }
+          legend: { position: 'bottom', labels: { color: '#A3ADBD', font: { size: 10 } } }
         },
         cutout: '68%'
       }
@@ -304,21 +304,21 @@
       data: {
         labels: labels,
         datasets: [
-          { label: 'Critical', data: criticalData, backgroundColor: '#ef4655' },
-          { label: 'High', data: highData, backgroundColor: '#f08a24' },
-          { label: 'Elevated', data: elevatedData, backgroundColor: '#e6b422' },
-          { label: 'Normal', data: normalData, backgroundColor: '#3fb68b' }
+          { label: 'Critical', data: criticalData, backgroundColor: '#FF4545' },
+          { label: 'High', data: highData, backgroundColor: '#FF7043' },
+          { label: 'Elevated', data: elevatedData, backgroundColor: '#FFB547' },
+          { label: 'Normal', data: normalData, backgroundColor: '#29C995' }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#67738f', font: { size: 10 } } },
-          y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#67738f', font: { size: 10 } } }
+          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6A7589', font: { size: 10 } } },
+          y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6A7589', font: { size: 10 } } }
         },
         plugins: {
-          legend: { position: 'top', labels: { color: '#9aa6bf', font: { size: 10 } } }
+          legend: { position: 'top', labels: { color: '#A3ADBD', font: { size: 10 } } }
         }
       }
     });
@@ -344,7 +344,7 @@
         mapMarkers.forEach(m => m.remove());
         mapMarkers = [];
         pointsData.points.forEach(p => {
-          const color = p.max_risk >= 75 ? '#ef4655' : p.max_risk >= 50 ? '#f08a24' : '#3fb68b';
+          const color = p.max_risk >= 75 ? '#FF4545' : p.max_risk >= 50 ? '#FF7043' : '#29C995';
           const marker = L.circleMarker([p.lat, p.lng], {
             radius: Math.max(5, Math.min(14, p.attack_count)),
             fillColor: color,

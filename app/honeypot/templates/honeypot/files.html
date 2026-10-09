@@ -13,7 +13,7 @@
       <div style="display: flex; flex-direction: column; gap: 4px;">
         {% for f in folders %}
         {% set f_path = '/' + f %}
-        <a href="/files?path={{ f_path }}" style="padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{ 'var(--primary)' if current_folder == f_path else '#334155' }}; background: {{ '#eff6ff' if current_folder == f_path else 'transparent' }};">
+        <a href="/files?path={{ f_path }}" style="padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: {{ 'var(--primary)' if current_folder == f_path else 'var(--text-muted)' }}; background: {{ 'rgba(255, 87, 34, 0.15)' if current_folder == f_path else 'transparent' }};">
           📁 /{{ f }}
         </a>
         {% endfor %}
