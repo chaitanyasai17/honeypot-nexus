@@ -1,16 +1,16 @@
 :root {
   /* Surfaces — Premium Dark Charcoal */
   --hn-bg-0: #080B12;   /* App background */
-  --hn-bg-1: #0D111B;   /* Panels */
-  --hn-bg-2: #111722;   /* Raised, hover, table header */
-  --hn-bg-3: #171D29;   /* Inputs, active rows */
-  --hn-border: #283142;
-  --hn-border-strong: #374156;
+  --hn-bg-1: #0C111B;   /* Panels / secondary surfaces */
+  --hn-bg-2: #101722;   /* Raised panels, cards, table header */
+  --hn-bg-3: #161F2C;   /* Inputs, elevated containers, active rows */
+  --hn-border: #293344;
+  --hn-border-strong: #3A475C;
 
   /* Typography Colors */
-  --hn-text: #F4F6FA;
-  --hn-text-dim: #A3ADBD;
-  --hn-text-faint: #6A7589;
+  --hn-text: #F3F5F9;
+  --hn-text-dim: #9BA8BA;
+  --hn-text-faint: #6A778B;
 
   /* Primary Accent — Orange / Red-Orange */
   --hn-accent: #FF5722;
@@ -27,13 +27,13 @@
   --hn-sev-high: #FF7043;
   --hn-sev-high-bg: rgba(255, 112, 67, 0.15);
 
-  --hn-sev-critical: #FF4545;
-  --hn-sev-critical-bg: rgba(255, 69, 69, 0.16);
+  --hn-sev-critical: #FF3D3D;
+  --hn-sev-critical-bg: rgba(255, 61, 61, 0.16);
 
   /* Operational Status */
   --hn-ok: #29C995;
   --hn-warn: #FFB547;
-  --hn-down: #FF4545;
+  --hn-down: #FF3D3D;
   --hn-info: #FF5722;
 
   /* Attack Category Palette */

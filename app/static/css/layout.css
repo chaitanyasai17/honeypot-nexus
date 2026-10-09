@@ -4,12 +4,35 @@
   display: flex;
   height: 100vh;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* Fixed Cinematic Cyber Background */
+.hn-cyber-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  user-select: none;
+}
+
+.hn-cyber-svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* Sidebar */
 .hn-sidebar {
-  width: 248px;
-  background: var(--hn-bg-1);
+  width: 254px;
+  background: rgba(12, 17, 27, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-right: 1px solid var(--hn-border);
   display: flex;
   flex-direction: column;
@@ -18,26 +41,62 @@
 }
 
 .hn-sidebar-brand {
-  height: 56px;
+  height: 64px;
   padding: 0 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border-bottom: 1px solid var(--hn-border);
-  background: linear-gradient(90deg, rgba(255, 87, 34, 0.08) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(255, 87, 34, 0.12) 0%, transparent 100%);
   font-weight: 700;
   font-size: var(--hn-fs-md);
   color: var(--hn-text);
   letter-spacing: -0.01em;
 }
 
+.hn-brand-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 87, 34, 0.12);
+  border: 1px solid rgba(255, 87, 34, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hn-accent);
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(255, 87, 34, 0.2);
+}
+
+.hn-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.15;
+}
+
+.hn-brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hn-text);
+  letter-spacing: -0.01em;
+}
+
+.hn-brand-kicker {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--hn-text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .hn-sidebar-nav {
-  padding: 12px 8px;
+  padding: 14px 10px;
   overflow-y: auto;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .hn-nav-item {
@@ -45,36 +104,33 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  border-radius: var(--hn-r-sm);
+  border-radius: 8px;
   color: var(--hn-text-dim);
   font-size: var(--hn-fs-sm);
   font-weight: 500;
   text-decoration: none;
   transition: all var(--hn-dur) var(--hn-ease);
   position: relative;
+  border: 1px solid transparent;
 }
 
 .hn-nav-item:hover {
   background: var(--hn-bg-2);
   color: var(--hn-text);
   text-decoration: none;
+  border-color: rgba(255, 87, 34, 0.18);
 }
 
 .hn-nav-item.active {
-  background: var(--hn-bg-3);
-  color: var(--hn-text);
+  background: rgba(255, 87, 34, 0.16);
+  border-color: rgba(255, 87, 34, 0.4);
+  color: #FFFFFF;
   font-weight: 600;
+  box-shadow: 0 0 14px rgba(255, 87, 34, 0.16);
 }
 
-.hn-nav-item.active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  background: var(--hn-accent);
-  border-radius: 0 2px 2px 0;
+.hn-nav-item.active svg {
+  color: var(--hn-accent);
 }
 
 .hn-nav-badge {
@@ -111,19 +167,22 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--hn-bg-0);
+  background: transparent;
 }
 
 /* Top Bar */
 .hn-topbar {
   height: 56px;
-  background: var(--hn-bg-1);
+  background: rgba(12, 17, 27, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--hn-border);
   padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  z-index: 9;
 }
 
 .hn-topbar-left {
@@ -187,6 +246,7 @@
   flex-grow: 1;
   overflow-y: auto;
   padding: 24px;
+  background: transparent;
 }
 
 .hn-page-header {
@@ -209,6 +269,50 @@
   margin-top: 4px;
 }
 
+/* Top Header Technical Kicker */
+.hn-header-kicker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hn-header-kicker {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  text-align: left;
+}
+
+.hn-kicker-bar {
+  width: 3px;
+  background: var(--hn-accent);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255, 87, 34, 0.6);
+}
+
+.hn-kicker-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
+}
+
+.hn-kicker-line1 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--hn-text-dim);
+  text-transform: uppercase;
+}
+
+.hn-kicker-line2 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--hn-accent);
+  text-transform: uppercase;
+}
+
 /* Responsive 12-column grid */
 .hn-grid-12 {
   display: grid;
@@ -227,5 +331,82 @@
 @media (max-width: 1200px) {
   .hn-col-8, .hn-col-7, .hn-col-6, .hn-col-5, .hn-col-4, .hn-col-3 {
     grid-column: span 12;
+  }
+}
+
+/* Cyber Background Radar & Arc Tracer Animations */
+.hn-node-radar {
+  fill: none;
+  stroke: #FF5722;
+  stroke-width: 1.2;
+  transform-origin: center;
+  animation: hn-radar-ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.hn-radar-delay1 { animation-delay: 1s; }
+.hn-radar-delay2 { animation-delay: 1.8s; }
+.hn-radar-delay3 { animation-delay: 2.5s; }
+
+.hn-radar-attack {
+  stroke: #FF3D3D;
+  stroke-width: 1.6;
+  animation: hn-radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes hn-radar-ping {
+  0% {
+    r: 4;
+    opacity: 0.95;
+  }
+  70% {
+    r: 24;
+    opacity: 0.15;
+  }
+  100% {
+    r: 28;
+    opacity: 0;
+  }
+}
+
+.hn-arc-tracer {
+  stroke-dasharray: 45, 420;
+  stroke-dashoffset: 465;
+  animation: hn-arc-flow 5s linear infinite;
+}
+
+.hn-tracer-fast {
+  stroke-dasharray: 60, 520;
+  animation-duration: 3.6s;
+}
+
+.hn-tracer-attack {
+  stroke-dasharray: 55, 340;
+  animation-duration: 2.6s;
+}
+
+.hn-tracer-delay1 { animation-delay: 1.2s; }
+.hn-tracer-delay2 { animation-delay: 2.4s; }
+.hn-tracer-delay3 { animation-delay: 3.5s; }
+
+@keyframes hn-arc-flow {
+  0% { stroke-dashoffset: 465; }
+  100% { stroke-dashoffset: -465; }
+}
+
+.hn-globe-sweep {
+  transform-origin: 0 0;
+  animation: hn-globe-rotate 20s linear infinite;
+}
+
+@keyframes hn-globe-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hn-node-radar,
+  .hn-arc-tracer,
+  .hn-globe-sweep {
+    animation: none !important;
   }
 }

@@ -21,15 +21,23 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+  <!-- Cinematic Cybersecurity SOC Background -->
+  {% include "dashboard/cyber_bg.html" %}
+
   <div class="hn-app-layout">
     <!-- Sidebar Navigation -->
     <aside class="hn-sidebar">
       <div class="hn-sidebar-brand">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--hn-accent);">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <circle cx="12" cy="11" r="3"/>
-        </svg>
-        <span>Honeypot Nexus</span>
+        <div class="hn-brand-icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polygon points="12 8 15 10 15 14 12 16 9 14 9 10" fill="rgba(255, 87, 34, 0.35)" stroke="#FF5722" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="hn-brand-text">
+          <span class="hn-brand-name">Honeypot Nexus</span>
+          <span class="hn-brand-kicker">DECEPT • TRACK • ANALYZE</span>
+        </div>
       </div>
 
       <nav class="hn-sidebar-nav">

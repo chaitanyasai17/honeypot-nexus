@@ -5,48 +5,85 @@
 {% block content %}
 <div class="hn-page-header">
   <div>
-    <h1 class="hn-page-title">Security Operations Center — Overview</h1>
+    <h1 class="hn-page-title">Security Operations Center — <span style="color: var(--hn-accent);">Overview</span></h1>
     <div class="hn-page-sub">Defensive Deception Telemetry & Live Intrusion Intelligence</div>
   </div>
-  <div style="display:flex; gap:10px;">
-    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadOverview();">⟳ Refresh Telemetry</button>
+  <div class="hn-header-kicker-wrap">
+    <div class="hn-header-kicker">
+      <span class="hn-kicker-bar"></span>
+      <div class="hn-kicker-content">
+        <div class="hn-kicker-line1">DECEPTION TODAY</div>
+        <div class="hn-kicker-line2">INTELLIGENCE TOMORROW</div>
+      </div>
+    </div>
+    <button class="hn-btn hn-btn-secondary hn-btn-sm" onclick="loadOverview();" title="Refresh Telemetry">⟳ Refresh Telemetry</button>
   </div>
 </div>
 
 <!-- 1. Row of 6 KPI Cards -->
 <div class="hn-kpi-grid">
   <div class="hn-kpi-card">
-    <div class="hn-kpi-label">Total Events</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div class="hn-kpi-icon-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div class="hn-kpi-label" style="margin-bottom: 0;">Total Events</div>
+    </div>
     <div class="hn-kpi-val" id="kpiTotalEvents">0</div>
     <div class="hn-kpi-sub">Sensor interactions</div>
   </div>
 
   <div class="hn-kpi-card">
-    <div class="hn-kpi-label">Active Attackers</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div class="hn-kpi-icon-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="hn-kpi-label" style="margin-bottom: 0;">Active Attackers</div>
+    </div>
     <div class="hn-kpi-val" id="kpiActiveAttackers">0</div>
     <div class="hn-kpi-sub">Distinct IPs (15m window)</div>
   </div>
 
   <div class="hn-kpi-card">
-    <div class="hn-kpi-label">Active Sessions</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div class="hn-kpi-icon-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      </div>
+      <div class="hn-kpi-label" style="margin-bottom: 0;">Active Sessions</div>
+    </div>
     <div class="hn-kpi-val" id="kpiActiveSessions">0</div>
     <div class="hn-kpi-sub">Correlated engagements</div>
   </div>
 
   <div class="hn-kpi-card">
-    <div class="hn-kpi-label">High / Critical Alerts</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div class="hn-kpi-icon-box" style="background: rgba(255, 61, 61, 0.12); border-color: rgba(255, 61, 61, 0.3); color: var(--hn-critical);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <div class="hn-kpi-label" style="margin-bottom: 0;">High / Critical Alerts</div>
+    </div>
     <div class="hn-kpi-val" id="kpiCriticalAlerts" style="color: var(--hn-critical);">0</div>
     <div class="hn-kpi-sub">Requires triage</div>
   </div>
 
   <div class="hn-kpi-card">
-    <div class="hn-kpi-label">Average Session Risk</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div class="hn-kpi-icon-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="hn-kpi-label" style="margin-bottom: 0;">Average Session Risk</div>
+    </div>
     <div class="hn-kpi-val" id="kpiAvgRisk">0</div>
     <div class="hn-kpi-sub">Score out of 100</div>
   </div>
 
   <div class="hn-kpi-card">
-    <div class="hn-kpi-label">Honeypot Uptime</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div class="hn-kpi-icon-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="hn-kpi-label" style="margin-bottom: 0;">Honeypot Uptime</div>
+    </div>
     <div class="hn-kpi-val" id="kpiUptime">00:00:00</div>
     <div class="hn-kpi-sub">Sensors online</div>
   </div>
@@ -329,9 +366,23 @@
     if (!mapContainer || leafletMap) return;
 
     leafletMap = L.map('overviewMap', { zoomControl: false, attributionControl: false }).setView([20, 0], 1);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 6 }).addTo(leafletMap);
-
-    fetchMapPoints();
+    
+    fetch("{{ url_for('static', filename='vendor/world-countries.json') }}")
+      .then(r => r.json())
+      .then(geoData => {
+        L.geoJSON(geoData, {
+          style: {
+            fillColor: '#161F2C',
+            fillOpacity: 0.95,
+            color: '#293344',
+            weight: 0.75
+          }
+        }).addTo(leafletMap);
+        fetchMapPoints();
+      })
+      .catch(() => {
+        fetchMapPoints();
+      });
   }
 
   async function fetchMapPoints() {
