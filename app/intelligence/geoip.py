@@ -32,6 +32,7 @@ class GeoResult:
     tor: bool = False
     source: Literal["mock", "maxmind"] = "mock"
     approximate: bool = True
+    is_simulated: bool = False
     note: str = "Approximate location derived from IP data; not the attacker's physical location."
 
     def to_dict(self):
@@ -51,7 +52,11 @@ class GeoIPProvider(ABC):
 
 
 class MockGeoIPProvider(GeoIPProvider):
-    """Deterministic, offline synthetic GeoIP provider based on RFC 5737 & private ranges."""
+    """
+    Deterministic, offline synthetic GeoIP provider based on RFC 5737 & private ranges.
+    Guarantees synthetic records are strictly restricted to configured lab and RFC 5737 test ranges.
+    Never invents location, city, ISP, or ASN data for arbitrary public IP addresses.
+    """
     name = "mock"
 
     def __init__(self, data_file: Optional[Path] = None):
@@ -75,29 +80,11 @@ class MockGeoIPProvider(GeoIPProvider):
 
     def lookup(self, ip: str) -> Optional[GeoResult]:
         try:
-            addr = ipaddress.ip_address(ip)
+            addr = ipaddress.ip_address(ip.strip())
         except ValueError:
             return None
 
-        # 1. Check local private/loopback
-        if addr.is_loopback or addr.is_private or addr.is_link_local:
-            return GeoResult(
-                ip=ip,
-                country="India",
-                country_code="IN",
-                region="Tamil Nadu",
-                city="Chennai (Local Lab)",
-                latitude=Config.LAB_LAT,
-                longitude=Config.LAB_LON,
-                asn="AS64500",
-                isp="Campus Lab Gateway",
-                organization="Local Deception Lab",
-                vpn=False,
-                tor=False,
-                source="mock"
-            )
-
-        # 2. Check exact CIDR matches in mock database
+        # 1. Check exact CIDR matches in mock database (RFC 5737 synthetic test ranges & configured subnets)
         for net, rec in self.records:
             if addr in net:
                 return GeoResult(
@@ -113,39 +100,64 @@ class MockGeoIPProvider(GeoIPProvider):
                     organization=rec.get("organization"),
                     vpn=rec.get("vpn", False),
                     tor=rec.get("tor", False),
-                    source="mock"
+                    source="mock",
+                    approximate=True,
+                    is_simulated=True,
+                    note="Synthetic documentation/test IP assignment (RFC 5737)."
                 )
 
-        # 3. Deterministic hash-based fallback from mock records for arbitrary public IPs
-        if self.records:
-            hash_idx = int(hashlib.sha256(ip.encode("utf-8")).hexdigest(), 16) % len(self.records)
-            _, rec = self.records[hash_idx]
+        # 2. Check local private/loopback/link-local addresses
+        if addr.is_loopback or addr.is_private or addr.is_link_local:
             return GeoResult(
                 ip=ip,
-                country=rec.get("country"),
-                country_code=rec.get("country_code"),
-                region=rec.get("region"),
-                city=rec.get("city"),
-                latitude=rec.get("latitude"),
-                longitude=rec.get("longitude"),
-                asn=rec.get("asn"),
-                isp=rec.get("isp"),
-                organization=rec.get("organization"),
-                vpn=rec.get("vpn", False),
-                tor=rec.get("tor", False),
-                source="mock"
+                country="Internal Network",
+                country_code="XX",
+                region="Internal",
+                city="Loopback / LAN",
+                latitude=None,
+                longitude=None,
+                asn="AS64500",
+                isp="Internal Network (Simulated)",
+                organization="Local Deception Lab",
+                vpn=False,
+                tor=False,
+                source="mock",
+                approximate=True,
+                is_simulated=True,
+                note="Local/private network address."
             )
 
-        return GeoResult(ip=ip, country="Unknown", source="mock")
+        # 3. For arbitrary public IPs not in the synthetic range:
+        # DO NOT invent country, city, ISP, or ASN information!
+        return GeoResult(
+            ip=ip,
+            country="Unknown",
+            country_code="XX",
+            region="Unknown",
+            city="Unknown",
+            latitude=None,
+            longitude=None,
+            asn=None,
+            isp=None,
+            organization=None,
+            vpn=False,
+            tor=False,
+            source="mock",
+            approximate=True,
+            is_simulated=False,
+            note="Unmapped public IP: Mock GeoIP does not invent synthetic location data for unconfigured public addresses. Real GeoIP database required."
+        )
 
 
 class MaxMindGeoIPProvider(GeoIPProvider):
     """MaxMind MMDB reader with safe fallback."""
     name = "maxmind"
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, asn_db_path: Optional[str] = None):
         self.db_path = db_path or Config.GEOIP_DATABASE
+        self.asn_db_path = asn_db_path or Config.GEOIP_ASN_DATABASE
         self.reader = None
+        self.asn_reader = None
         self._init_reader()
 
     def _init_reader(self):
@@ -154,10 +166,16 @@ class MaxMindGeoIPProvider(GeoIPProvider):
             p = Path(self.db_path)
             if p.exists() and p.is_file():
                 self.reader = geoip2.database.Reader(str(p))
-                logger.info(f"Loaded MaxMind database from {self.db_path}")
+                logger.info(f"Loaded MaxMind City database from {self.db_path}")
+
+            p_asn = Path(self.asn_db_path)
+            if p_asn.exists() and p_asn.is_file():
+                self.asn_reader = geoip2.database.Reader(str(p_asn))
+                logger.info(f"Loaded MaxMind ASN database from {self.asn_db_path}")
         except Exception as e:
             logger.warning(f"MaxMind reader unavailable: {e}")
             self.reader = None
+            self.asn_reader = None
 
     def is_available(self) -> bool:
         return self.reader is not None
@@ -167,6 +185,16 @@ class MaxMindGeoIPProvider(GeoIPProvider):
             return None
         try:
             res = self.reader.city(ip)
+            asn_str = None
+            isp_str = None
+            if self.asn_reader:
+                try:
+                    asn_res = self.asn_reader.asn(ip)
+                    asn_str = f"AS{asn_res.autonomous_system_number}" if asn_res.autonomous_system_number else None
+                    isp_str = asn_res.autonomous_system_organization
+                except Exception:
+                    pass
+
             return GeoResult(
                 ip=ip,
                 country=res.country.name or "Unknown",
@@ -175,9 +203,16 @@ class MaxMindGeoIPProvider(GeoIPProvider):
                 city=res.city.name or "Unknown",
                 latitude=res.location.latitude,
                 longitude=res.location.longitude,
-                source="maxmind"
+                asn=asn_str,
+                isp=isp_str,
+                organization=isp_str,
+                source="maxmind",
+                approximate=False,
+                is_simulated=False,
+                note="Verified MaxMind GeoIP lookup."
             )
-        except Exception:
+        except Exception as e:
+            logger.debug(f"MaxMind lookup error for {ip}: {e}")
             return None
 
 
@@ -187,7 +222,7 @@ def build_provider(provider_type: str = "auto") -> GeoIPProvider:
         maxmind = MaxMindGeoIPProvider()
         if maxmind.is_available():
             return maxmind
-        logger.warning("MaxMind requested but unavailable, falling back to Mock provider")
+        logger.warning("MaxMind requested but unavailable at configured path, falling back to Mock provider")
         return MockGeoIPProvider()
 
     elif provider_type == "auto":
@@ -197,3 +232,4 @@ def build_provider(provider_type: str = "auto") -> GeoIPProvider:
         return MockGeoIPProvider()
 
     return MockGeoIPProvider()
+

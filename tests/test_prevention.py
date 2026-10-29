@@ -332,18 +332,25 @@ def test_admin_block_unblock_api_and_audit(soc_app, soc_client):
 
 
 # -------------------------------------------------------------
-# 11. End-to-End Pipeline Integration Verification
+# 11. End-to-End Pipeline Integration & Autonomous Blocking
 # -------------------------------------------------------------
-def test_pipeline_integration_with_prevention(soc_app):
+def test_pipeline_integration_with_prevention(soc_app, honeypot_client, monkeypatch):
     """
     Verifies that the complete event processing pipeline (EventBus -> Detection -> Prevention -> DB)
-    continues functioning seamlessly and triggers autonomous blocks when critical thresholds are reached.
+    triggers autonomous blocking when critical threat thresholds are reached, and enforces HTTP 403.
     """
+    monkeypatch.setattr(Config, "AUTO_BLOCK_RISK_THRESHOLD", 30)
+
     with soc_app.app_context():
         event_bus = soc_app.extensions["event_bus"]
+        prev_svc = get_prevention_service()
         test_ip = "198.51.100.85"
 
-        # Create high-severity attack event
+        # 1. Before attack: legitimate request succeeds with 200
+        resp_before = honeypot_client.get("/", environ_base={"REMOTE_ADDR": test_ip})
+        assert resp_before.status_code == 200
+
+        # 2. Publish high-severity SQL injection attack
         event = HoneypotEvent(
             event_id="test_ev_prev_001",
             timestamp=datetime.now(timezone.utc),
@@ -361,9 +368,140 @@ def test_pipeline_integration_with_prevention(soc_app):
         result = event_bus.publish(event)
         assert result.accepted is True
 
+        # Allow async pipeline thread to execute detection, scoring & prevention
         time.sleep(0.5)
 
-        # Verify event was saved to database
+        # 3. Assert event was persisted to database
         saved_ev = HoneypotEventModel.query.filter_by(event_id="test_ev_prev_001").first()
         assert saved_ev is not None
         assert saved_ev.source_ip == test_ip
+
+        # 4. Assert automatic policy triggered blocking
+        is_blocked, reason = prev_svc.is_blocked(test_ip)
+        assert is_blocked is True
+        assert "Automated Policy" in reason
+
+        # 5. Assert BlockedIP record exists in database
+        db_block = BlockedIP.query.filter_by(ip=test_ip, is_active=True).first()
+        assert db_block is not None
+        assert db_block.blocked_by == "auto_prevention"
+
+        # 6. Assert subsequent honeypot request receives HTTP 403 Forbidden
+        resp_after = honeypot_client.get("/", environ_base={"REMOTE_ADDR": test_ip})
+        assert resp_after.status_code == 403
+        assert b"403 Forbidden" in resp_after.data
+
+        # 7. Unblock and verify access is restored (HTTP 200)
+        unblock_res = prev_svc.unblock_ip(test_ip, unblocked_by="admin_test", reason="Remediated")
+        assert unblock_res is True
+
+        resp_restored = honeypot_client.get("/", environ_base={"REMOTE_ADDR": test_ip})
+        assert resp_restored.status_code == 200
+
+
+# -------------------------------------------------------------
+# 12. Block Expiry and In-Memory / DB State Synchronization
+# -------------------------------------------------------------
+def test_block_expiry_and_auto_clear(soc_app, honeypot_client):
+    """
+    Verifies that when a temporary block expires:
+    1. is_blocked returns False.
+    2. In-memory cache and DB state synchronize (is_active=False).
+    3. Honeypot requests from the IP are accepted again (200).
+    """
+    with soc_app.app_context():
+        prev_svc = get_prevention_service()
+        test_ip = "198.51.100.92"
+
+        # Create block with past expiration
+        now = datetime.now(timezone.utc)
+        past_expiration = now - timedelta(minutes=10)
+
+        with prev_svc._lock:
+            prev_svc._active_blocks[test_ip] = {
+                "ip": test_ip,
+                "reason": "Test block that expired",
+                "created_at": now - timedelta(minutes=40),
+                "expires_at": past_expiration,
+                "blocked_by": "test",
+                "event_id": None,
+                "duration_minutes": 30
+            }
+
+        db_block = BlockedIP(
+            ip=test_ip,
+            reason="Test block that expired",
+            created_at=now - timedelta(minutes=40),
+            expires_at=past_expiration,
+            blocked_by="test",
+            is_active=True
+        )
+        db.session.add(db_block)
+        db.session.commit()
+
+        # is_blocked should detect expiry, evict from cache, and set is_active=False
+        is_blocked, _ = prev_svc.is_blocked(test_ip)
+        assert is_blocked is False
+
+        # Verify DB is synchronized
+        db.session.refresh(db_block)
+        assert db_block.is_active is False
+
+        # Verify honeypot request succeeds (200)
+        resp = honeypot_client.get("/", environ_base={"REMOTE_ADDR": test_ip})
+        assert resp.status_code == 200
+
+
+# -------------------------------------------------------------
+# 13. Prevention API Input Validation (IP, Duration, Reason, Whitelist)
+# -------------------------------------------------------------
+def test_prevention_api_strict_validation(soc_app, soc_client):
+    """
+    Verifies input validation on prevention management API endpoints:
+    - Malformed IP formats rejected (422).
+    - Loopback and whitelisted IPs rejected from blocking (400).
+    - Duration out of bounds (1 to 10080 minutes) rejected (422).
+    - Reason length validation (1 to 500 characters) enforced (422).
+    - Pagination parameters sanitized safely without error.
+    """
+    with soc_app.app_context():
+        admin = User.query.filter_by(username="admin_test").first()
+        authenticate_client(soc_app, soc_client, admin)
+
+        # 1. Invalid IP formats
+        for bad_ip in ["not-an-ip", "999.999.999.999", "abc::123::1", ""]:
+            resp = soc_client.post("/api/prevention/block", json={"ip": bad_ip, "duration_minutes": 30, "reason": "Test"})
+            assert resp.status_code == 422, f"Expected 422 for bad IP: {bad_ip}, got {resp.status_code}"
+
+        # 2. Whitelisted / loopback IPs must be rejected
+        for loopback_ip in ["127.0.0.1", "::1", "localhost"]:
+            resp = soc_client.post("/api/prevention/block", json={"ip": loopback_ip, "duration_minutes": 30, "reason": "Test"})
+            assert resp.status_code == 400, f"Expected 400 for whitelisted IP: {loopback_ip}, got {resp.status_code}"
+
+        # 3. Invalid duration (less than 1 or greater than 10080 minutes)
+        for bad_dur in [0, -15, 10081, 50000, "invalid_num"]:
+            resp = soc_client.post("/api/prevention/block", json={"ip": "198.51.100.22", "duration_minutes": bad_dur, "reason": "Test"})
+            assert resp.status_code == 422, f"Expected 422 for duration {bad_dur}, got {resp.status_code}"
+
+        # 4. Invalid reason length (empty or > 500 chars)
+        resp_empty_reason = soc_client.post("/api/prevention/block", json={"ip": "198.51.100.22", "duration_minutes": 30, "reason": ""})
+        assert resp_empty_reason.status_code == 422
+
+        resp_huge_reason = soc_client.post("/api/prevention/block", json={"ip": "198.51.100.22", "duration_minutes": 30, "reason": "X" * 501})
+        assert resp_huge_reason.status_code == 422
+
+        # 5. Unblock validation
+        resp_unblock_bad_ip = soc_client.post("/api/prevention/unblock", json={"ip": "invalid-ip", "reason": "Testing"})
+        assert resp_unblock_bad_ip.status_code == 422
+
+        resp_unblock_huge_reason = soc_client.post("/api/prevention/unblock", json={"ip": "198.51.100.22", "reason": "X" * 501})
+        assert resp_unblock_huge_reason.status_code == 422
+
+        # 6. Pagination sanitization handles negative or extreme values gracefully
+        resp_paginated = soc_client.get("/api/prevention/blocks?page=-5&per_page=999")
+        assert resp_paginated.status_code == 200
+        pdata = resp_paginated.get_json()
+        assert pdata["current_page"] >= 1
+
+        resp_events = soc_client.get("/api/prevention/events?limit=9999")
+        assert resp_events.status_code == 200

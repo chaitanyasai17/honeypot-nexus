@@ -32,6 +32,7 @@ def create_soc_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    from app.dashboard import websocket as _soc_ws  # Registers SocketIO handlers into socketio.handlers before server init
     socketio.init_app(app)
     limiter.init_app(app)
     csrf.init_app(app)

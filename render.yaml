@@ -14,6 +14,10 @@ services:
         value: production
       - key: ALLOW_NON_LOOPBACK
         value: "true"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: PUBLIC_HTTPS
+        value: "true"
       - key: DASHBOARD_BIND_HOST
         value: 0.0.0.0
       - key: HONEYPOT_BIND_HOST

@@ -29,6 +29,7 @@ from app.services.audit_service import audit_log
 from app.detection.engine import get_detection_engine
 from app.extensions import db, limiter
 from app.errors import ApiError
+from app.config import Config
 from app.utils.timezone import to_utc_iso, now_utc, to_ist, format_ist, format_ist_time
 
 api_soc_bp = Blueprint("soc_api", __name__, url_prefix="/api")
@@ -276,6 +277,8 @@ def list_attackers():
                 "source_ip": p.source_ip,
                 "country": p.geo_record.country if p.geo_record else "Unknown",
                 "city": p.geo_record.city if p.geo_record else "Unknown",
+                "geo_source": p.geo_record.source if p.geo_record else "unknown",
+                "is_simulated": (p.geo_record.source == "mock" and p.geo_record.country != "Unknown") if p.geo_record else False,
                 "first_seen": to_utc_iso(p.first_seen),
                 "last_seen": to_utc_iso(p.last_seen),
                 "total_sessions": p.total_sessions,
@@ -314,6 +317,8 @@ def get_attacker(ip_or_id):
             "city": geo.city if geo else "Unknown",
             "isp": geo.isp if geo else "Unknown",
             "asn": geo.asn if geo else "Unknown",
+            "geo_source": geo.source if geo else "unknown",
+            "is_simulated": (geo.source == "mock" and geo.country != "Unknown") if geo else False,
             "first_seen": to_utc_iso(profile.first_seen),
             "last_seen": to_utc_iso(profile.last_seen),
             "total_sessions": profile.total_sessions,
@@ -439,7 +444,7 @@ def get_map_points():
         if lat is None or lng is None:
             from app.intelligence.geoip import MockGeoIPProvider
             mock_geo = MockGeoIPProvider().lookup(p.source_ip)
-            if mock_geo and mock_geo.latitude is not None:
+            if mock_geo and mock_geo.latitude is not None and mock_geo.longitude is not None:
                 lat = mock_geo.latitude
                 lng = mock_geo.longitude
                 country = mock_geo.country
@@ -454,6 +459,15 @@ def get_map_points():
             isp = geo.isp or "Unknown"
             asn = geo.asn or "None"
 
+        # Validate coordinates are valid numbers and within standard ranges
+        try:
+            lat = float(lat)
+            lng = float(lng)
+            if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+                continue
+        except (ValueError, TypeError):
+            continue
+
         if p.max_risk >= 80:
             sev = "CRITICAL"
         elif p.max_risk >= 60:
@@ -465,6 +479,9 @@ def get_map_points():
 
         latest_sess = p.sessions[0] if p.sessions else None
         sess_id = latest_sess.id if latest_sess else f"SES-{p.id:04x}"
+
+        is_mock = (geo.source == "mock") if geo else True
+        is_simulated = is_mock and (country != "Unknown")
 
         points.append({
             "ip": p.source_ip,
@@ -485,40 +502,31 @@ def get_map_points():
             "first_seen": to_utc_iso(p.created_at) if p.created_at else None,
             "last_activity": to_utc_iso(p.updated_at) if p.updated_at else None,
             "status": "ACTIVE" if (latest_sess and latest_sess.status == "active") else "MONITORED",
+            "source": geo.source if geo else "mock",
+            "is_simulated": is_simulated,
             "approx": True
         })
 
-    # When database points are minimal, supplement with realistic threat nodes
+    # Genuine metrics calculated directly from database records
     now = now_utc()
-    if len(points) < 6:
-        synthetic_demo_nodes = [
-            {"ip": "192.0.2.14", "lat": 37.7749, "lng": -122.4194, "country": "United States", "city": "San Francisco", "isp": "Silicon Cloud Systems", "asn": "AS64496", "attack_count": 34, "max_risk": 91, "severity": "CRITICAL", "top_attack": "SQL Injection", "vpn": False, "tor": False, "engagement": 84, "session_id": "SES-9821A", "first_seen": to_utc_iso(now - timedelta(minutes=45)), "last_activity": to_utc_iso(now - timedelta(minutes=4)), "status": "ACTIVE", "approx": True},
-            {"ip": "192.0.2.35", "lat": 50.1109, "lng": 8.6821, "country": "Germany", "city": "Frankfurt", "isp": "EuroHost GmbH", "asn": "AS64498", "attack_count": 28, "max_risk": 82, "severity": "CRITICAL", "top_attack": "Directory Traversal", "vpn": False, "tor": False, "engagement": 76, "session_id": "SES-DE410", "first_seen": to_utc_iso(now - timedelta(minutes=40)), "last_activity": to_utc_iso(now - timedelta(minutes=2)), "status": "ACTIVE", "approx": True},
-            {"ip": "198.51.100.18", "lat": 1.3521, "lng": 103.8198, "country": "Singapore", "city": "Singapore", "isp": "SingaTech Fiber", "asn": "AS64502", "attack_count": 19, "max_risk": 74, "severity": "HIGH", "top_attack": "Brute Force", "vpn": False, "tor": False, "engagement": 65, "session_id": "SES-SG091", "first_seen": to_utc_iso(now - timedelta(minutes=35)), "last_activity": to_utc_iso(now - timedelta(minutes=1)), "status": "ACTIVE", "approx": True},
-            {"ip": "198.51.100.5", "lat": 52.3676, "lng": 4.9041, "country": "Netherlands", "city": "Amsterdam", "isp": "Delta Datacenters B.V.", "asn": "AS64501", "attack_count": 42, "max_risk": 88, "severity": "CRITICAL", "top_attack": "Fake Shell Recon", "vpn": True, "tor": True, "engagement": 92, "session_id": "SES-NL772", "first_seen": to_utc_iso(now - timedelta(minutes=50)), "last_activity": to_utc_iso(now - timedelta(seconds=45)), "status": "ACTIVE", "approx": True},
-            {"ip": "198.51.100.34", "lat": 35.6762, "lng": 139.6503, "country": "Japan", "city": "Tokyo", "isp": "Nippon Packet Route", "asn": "AS64503", "attack_count": 15, "max_risk": 55, "severity": "ELEVATED", "top_attack": "API Enumeration", "vpn": False, "tor": False, "engagement": 48, "session_id": "SES-JP334", "first_seen": to_utc_iso(now - timedelta(minutes=25)), "last_activity": to_utc_iso(now - timedelta(seconds=30)), "status": "ACTIVE", "approx": True},
-            {"ip": "203.0.113.72", "lat": 12.9716, "lng": 77.5946, "country": "India", "city": "Bengaluru", "isp": "Bharat Packet Transit", "asn": "AS64505", "attack_count": 22, "max_risk": 68, "severity": "HIGH", "top_attack": "Credential Stuffing", "vpn": False, "tor": False, "engagement": 58, "session_id": "SES-IN512", "first_seen": to_utc_iso(now - timedelta(minutes=20)), "last_activity": to_utc_iso(now - timedelta(seconds=20)), "status": "ACTIVE", "approx": True},
-            {"ip": "192.0.2.68", "lat": 51.5074, "lng": -0.1278, "country": "United Kingdom", "city": "London", "isp": "Thames Transit Ltd", "asn": "AS64499", "attack_count": 17, "max_risk": 62, "severity": "HIGH", "top_attack": "Scanner Detection", "vpn": False, "tor": False, "engagement": 52, "session_id": "SES-UK118", "first_seen": to_utc_iso(now - timedelta(minutes=28)), "last_activity": to_utc_iso(now - timedelta(seconds=15)), "status": "ACTIVE", "approx": True},
-            {"ip": "203.0.113.38", "lat": -23.5505, "lng": -46.6333, "country": "Brazil", "city": "São Paulo", "isp": "Paulista Fiber Net", "asn": "AS64504", "attack_count": 11, "max_risk": 48, "severity": "ELEVATED", "top_attack": "Sensitive File Lure", "vpn": False, "tor": False, "engagement": 41, "session_id": "SES-BR809", "first_seen": to_utc_iso(now - timedelta(minutes=15)), "last_activity": to_utc_iso(now - timedelta(seconds=10)), "status": "ACTIVE", "approx": True}
-        ]
-        existing_ips = {p["ip"] for p in points}
-        for node in synthetic_demo_nodes:
-            if node["ip"] not in existing_ips:
-                points.append(node)
+    active_cutoff = now - timedelta(minutes=15)
+    real_active_sessions = AttackerSession.query.filter(
+        AttackerSession.status == "active",
+        AttackerSession.last_seen >= active_cutoff
+    ).count()
 
     total_events = sum(p["attack_count"] for p in points)
     critical_count = sum(1 for p in points if p["severity"] == "CRITICAL")
-    avg_risk = round(sum(p["max_risk"] for p in points) / max(1, len(points)), 1)
+    avg_risk = round(sum(p["max_risk"] for p in points) / max(1, len(points)), 1) if points else 0.0
     active_attackers = len(points)
-    active_sessions = len(points) + 4
 
     target = {
-        "name": "HONEYPOT NEXUS SERVER",
+        "name": "HONEYPOT NEXUS SENSOR",
         "role": "Central Deception Core",
-        "lat": 50.1109,
-        "lng": 8.6821,
-        "city": "Frankfurt Deception Hub",
-        "country": "Germany",
+        "lat": getattr(Config, "LAB_LAT", 13.0827),
+        "lng": getattr(Config, "LAB_LON", 80.2707),
+        "city": "Deception Sensor Node",
+        "country": "Local Lab",
         "status": "OPERATIONAL",
         "surfaces": ["/login", "/admin", "/api", "/files", "/database", "/shell"]
     }
@@ -528,10 +536,12 @@ def get_map_points():
         "target": target,
         "stats": {
             "active_attackers": active_attackers,
-            "active_sessions": active_sessions,
+            "active_sessions": real_active_sessions,
             "total_events": total_events,
             "critical_count": critical_count,
-            "avg_risk": avg_risk
+            "avg_risk": avg_risk,
+            "geoip_provider": getattr(Config, "GEOIP_PROVIDER", "mock"),
+            "is_mock_provider": getattr(Config, "GEOIP_PROVIDER", "mock") == "mock"
         }
     })
 
@@ -727,8 +737,14 @@ def prevention_overview():
 @login_required
 def prevention_blocks():
     from app.services.prevention_service import get_prevention_service
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 20, type=int)
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        per_page = min(max(1, int(request.args.get("per_page", 20))), 100)
+    except (TypeError, ValueError):
+        per_page = 20
     prev_svc = get_prevention_service()
     return jsonify(prev_svc.get_all_blocks(page=page, per_page=per_page))
 
@@ -737,22 +753,35 @@ def prevention_blocks():
 @login_required
 @role_required("admin")
 def manual_block_ip():
+    import ipaddress
     from app.services.prevention_service import get_prevention_service
     from app.auth.security import get_authenticated_user
     body = request.get_json(silent=True) or request.form.to_dict() or {}
     ip = str(body.get("ip", "")).strip()
     reason = str(body.get("reason", "Manual block by SOC operator")).strip()
-    try:
-        duration = int(body.get("duration_minutes", 30))
-    except (ValueError, TypeError):
-        duration = 30
 
     if not ip:
         raise ApiError("validation_error", "IP address is required", 422)
 
     prev_svc = get_prevention_service()
     if prev_svc.is_whitelisted(ip):
-        raise ApiError("conflict", "Cannot block trusted or loopback IP address", 400)
+        raise ApiError("conflict", "Cannot block trusted, loopback, or whitelisted IP address", 400)
+
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        raise ApiError("validation_error", f"Invalid IP address format: {ip}", 422)
+
+    try:
+        duration = int(body.get("duration_minutes", 30))
+    except (ValueError, TypeError):
+        raise ApiError("validation_error", "Duration must be an integer", 422)
+
+    if duration < 1 or duration > 10080:
+        raise ApiError("validation_error", "Duration must be between 1 and 10080 minutes (max 7 days)", 422)
+
+    if not reason or len(reason) > 500:
+        raise ApiError("validation_error", "Reason must be between 1 and 500 characters", 422)
 
     user = get_authenticated_user()
     blocked_by = user.username if user else "admin"
@@ -775,6 +804,7 @@ def manual_block_ip():
 @login_required
 @role_required("admin")
 def manual_unblock_ip():
+    import ipaddress
     from app.services.prevention_service import get_prevention_service
     from app.auth.security import get_authenticated_user
     body = request.get_json(silent=True) or request.form.to_dict() or {}
@@ -783,6 +813,16 @@ def manual_unblock_ip():
 
     if not ip:
         raise ApiError("validation_error", "IP address is required", 422)
+
+    prev_svc = get_prevention_service()
+    if not prev_svc.is_whitelisted(ip):
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            raise ApiError("validation_error", f"Invalid IP address format: {ip}", 422)
+
+    if not reason or len(reason) > 500:
+        raise ApiError("validation_error", "Reason must be between 1 and 500 characters", 422)
 
     user = get_authenticated_user()
     unblocked_by = user.username if user else "admin"
@@ -795,7 +835,10 @@ def manual_unblock_ip():
 @api_soc_bp.route("/prevention/events")
 @login_required
 def prevention_events():
-    limit = request.args.get("limit", 50, type=int)
+    try:
+        limit = min(max(1, int(request.args.get("limit", 50))), 200)
+    except (TypeError, ValueError):
+        limit = 50
     events = HoneypotEventModel.query.filter(
         HoneypotEventModel.event_type.in_(["rate_limited", "blocked_request", "payload_oversized"])
     ).order_by(HoneypotEventModel.timestamp.desc()).limit(limit).all()

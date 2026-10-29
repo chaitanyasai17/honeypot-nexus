@@ -5,6 +5,7 @@ Generates CSV export streams (with formula injection defense) and branded PDF th
 
 import io
 import csv
+from xml.sax.saxutils import escape
 from datetime import datetime, timezone
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -128,11 +129,17 @@ def generate_pdf_report() -> bytes:
     pulse = get_threat_pulse()
     kpis = get_kpis()
 
+    pulse_level = escape(str(pulse.get('level', 'LOW')))
+    pulse_score = escape(str(pulse.get('score', 0)))
+    total_events = escape(str(kpis.get('total_events', 0)))
+    active_attackers = escape(str(kpis.get('active_attackers', 0)))
+    active_sessions = escape(str(kpis.get('active_sessions', 0)))
+
     summary_text = (
         f"This threat summary synthesizes real-time telemetry from the Honeypot Nexus deception network. "
-        f"The current observed Threat Pulse stands at <b>{pulse['level']}</b> ({pulse['score']}/100). "
-        f"A total of <b>{kpis['total_events']}</b> events have been analyzed across <b>{kpis['active_attackers']}</b> active threat actors "
-        f"and <b>{kpis['active_sessions']}</b> distinct intrusion sessions."
+        f"The current observed Threat Pulse stands at <b>{pulse_level}</b> ({pulse_score}/100). "
+        f"A total of <b>{total_events}</b> events have been analyzed across <b>{active_attackers}</b> active threat actors "
+        f"and <b>{active_sessions}</b> distinct intrusion sessions."
     )
     story.append(Paragraph("1. Executive Threat Overview", h2_style))
     story.append(Paragraph(summary_text, body_style))

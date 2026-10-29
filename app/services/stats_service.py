@@ -27,16 +27,20 @@ def get_kpis() -> Dict[str, Any]:
 
     total_events = HoneypotEventModel.query.count()
     active_attackers = AttackerProfile.query.filter(AttackerProfile.last_seen >= active_cutoff).count()
-    active_sessions = AttackerSession.query.filter(AttackerSession.status == "active").count()
+    active_sessions = AttackerSession.query.filter(
+        AttackerSession.status == "active",
+        AttackerSession.last_seen >= active_cutoff
+    ).count()
 
     high_crit_alerts = Alert.query.filter(
         Alert.severity.in_(["HIGH", "CRITICAL"]),
         Alert.status.in_(["NEW", "ACKNOWLEDGED"])
     ).count()
 
-    # Average risk of active sessions
+    # Average risk of active sessions in window
     avg_risk_query = db.session.query(sa.func.avg(AttackerSession.risk_score)).filter(
-        AttackerSession.status == "active"
+        AttackerSession.status == "active",
+        AttackerSession.last_seen >= active_cutoff
     ).scalar()
     avg_risk = round(float(avg_risk_query or 0.0), 1)
 
@@ -91,19 +95,40 @@ def get_attack_distribution() -> Dict[str, int]:
     rows = db.session.query(
         HoneypotEventModel.attack_type,
         sa.func.count(HoneypotEventModel.event_id)
-    ).filter(HoneypotEventModel.attack_type != "NONE").group_by(HoneypotEventModel.attack_type).all()
+    ).filter(
+        HoneypotEventModel.attack_type.isnot(None),
+        HoneypotEventModel.attack_type != "",
+        HoneypotEventModel.attack_type != "NONE"
+    ).group_by(HoneypotEventModel.attack_type).all()
 
-    return {row[0]: row[1] for row in rows}
+    return {row[0]: row[1] for row in rows if row[0]}
 
 
 def get_attack_timeline(minutes: int = 60) -> List[Dict[str, Any]]:
-    """Aggregates telemetry into 1-minute buckets for timeline chart."""
+    """Aggregates telemetry into continuous 1-minute buckets for timeline chart."""
     now = utc_now()
     cutoff = now - timedelta(minutes=minutes)
 
-    events = HoneypotEventModel.query.filter(HoneypotEventModel.timestamp >= cutoff).order_by(HoneypotEventModel.timestamp.asc()).all()
-
+    # Pre-generate continuous sequential buckets for every minute in the rolling window
     buckets: Dict[str, dict] = {}
+    cursor = cutoff
+    while cursor <= now:
+        minute_str = to_ist(cursor).strftime("%H:%M")
+        if minute_str not in buckets:
+            buckets[minute_str] = {
+                "t": minute_str,
+                "count": 0,
+                "NORMAL": 0,
+                "ELEVATED": 0,
+                "HIGH": 0,
+                "CRITICAL": 0
+            }
+        cursor += timedelta(minutes=1)
+
+    events = HoneypotEventModel.query.filter(
+        HoneypotEventModel.timestamp >= cutoff
+    ).order_by(HoneypotEventModel.timestamp.asc()).all()
+
     for ev in events:
         minute_str = to_ist(ev.timestamp).strftime("%H:%M")
         if minute_str not in buckets:
@@ -116,9 +141,11 @@ def get_attack_timeline(minutes: int = 60) -> List[Dict[str, Any]]:
                 "CRITICAL": 0
             }
         buckets[minute_str]["count"] += 1
-        sev = ev.severity or "NORMAL"
+        sev = (ev.severity or "NORMAL").upper()
         if sev in buckets[minute_str]:
             buckets[minute_str][sev] += 1
+        else:
+            buckets[minute_str]["NORMAL"] += 1
 
     return list(buckets.values())
 

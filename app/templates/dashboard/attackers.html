@@ -57,7 +57,12 @@
       tbody.innerHTML = res.data.map(p => `
         <tr onclick="window.location.href='/dashboard/attackers/${encodeURIComponent(p.source_ip)}'">
           <td class="mono" style="font-weight:700; color:var(--hn-accent);">${esc(p.source_ip)}</td>
-          <td>${esc(p.city)}, ${esc(p.country)}</td>
+          <td>
+            ${esc(p.city)}, ${esc(p.country)}
+            ${p.is_simulated || p.geo_source === 'mock' 
+              ? '<span style="display:inline-block; font-size:9px; padding:1px 4px; border-radius:3px; background:rgba(255,181,71,0.15); color:#FFB547; border:1px solid rgba(255,181,71,0.35); margin-left:4px; font-weight:700;">SIMULATED</span>' 
+              : (p.country && p.country !== 'Unknown' ? '<span style="display:inline-block; font-size:9px; padding:1px 4px; border-radius:3px; background:rgba(41,201,149,0.15); color:#29C995; border:1px solid rgba(41,201,149,0.35); margin-left:4px; font-weight:700;">MAXMIND</span>' : '')}
+          </td>
           <td><span class="hn-chip hn-chip-new">${esc(p.top_attack_type)}</span></td>
           <td>${formatRiskMeter(p.max_risk)}</td>
           <td class="mono">${p.avg_risk}</td>

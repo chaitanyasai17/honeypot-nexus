@@ -71,6 +71,14 @@
   import { formatDateTime, formatSeverityBadge, formatRiskMeter } from "{{ url_for('static', filename='js/core/format.js') }}";
   import { esc } from "{{ url_for('static', filename='js/core/ui.js') }}";
 
+  function formatAttackBadge(attackType) {
+    if (!attackType || attackType === 'NONE') {
+      return '<span class="hn-chip" style="background:rgba(255,255,255,0.05); color:var(--hn-text-dim); border:1px solid rgba(255,255,255,0.08);">Normal Traffic</span>';
+    }
+    const formatted = attackType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return `<span class="hn-chip hn-chip-new" style="background:rgba(255,87,34,0.15); color:#FF7043; border:1px solid rgba(255,87,34,0.3); font-weight:600;">${esc(formatted)}</span>`;
+  }
+
   window.fetchLiveEvents = async function() {
     const params = { per_page: 50 };
     const ip = document.getElementById('filterIp').value.trim();
@@ -94,7 +102,7 @@
           <td class="mono">${formatDateTime(ev.timestamp)}</td>
           <td class="mono" style="font-weight:600; color:var(--hn-accent);">${esc(ev.source_ip)}</td>
           <td>${esc(ev.geo_city || 'Unknown')}, ${esc(ev.geo_country || 'Unknown')}</td>
-          <td><span class="hn-chip hn-chip-new">${esc(ev.attack_type)}</span></td>
+          <td>${formatAttackBadge(ev.attack_type)}</td>
           <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${esc(ev.surface)}</span></td>
           <td class="mono"><strong style="color:var(--hn-text);">${esc(ev.http_method)}</strong> ${esc(ev.endpoint)}</td>
           <td>${formatSeverityBadge(ev.severity)}</td>
@@ -120,7 +128,7 @@
       <td class="mono">${formatDateTime(eventDto.timestamp)}</td>
       <td class="mono" style="font-weight:600; color:var(--hn-accent);">${esc(eventDto.source_ip)}</td>
       <td>${esc(eventDto.geo_city || 'Unknown')}, ${esc(eventDto.geo_country || 'Unknown')}</td>
-      <td><span class="hn-chip hn-chip-new">${esc(eventDto.attack_type)}</span></td>
+      <td>${formatAttackBadge(eventDto.attack_type)}</td>
       <td><span style="font-size:11px; text-transform:uppercase; color:var(--hn-text-dim);">${esc(eventDto.surface)}</span></td>
       <td class="mono"><strong style="color:var(--hn-text);">${esc(eventDto.http_method)}</strong> ${esc(eventDto.endpoint)}</td>
       <td>${formatSeverityBadge(eventDto.severity)}</td>

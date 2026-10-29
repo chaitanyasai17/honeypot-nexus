@@ -140,8 +140,12 @@
       <div class="hn-panel-header">
         <span class="hn-panel-title">Attack Technique Breakdown</span>
       </div>
-      <div class="hn-panel-body" style="position: relative; height: 180px;">
+      <div class="hn-panel-body" style="position: relative; height: 180px; display: flex; align-items: center; justify-content: center;">
         <canvas id="attackDistChart"></canvas>
+        <div id="attackDistEmpty" style="display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 12px; pointer-events: none;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--hn-text-dim); margin-bottom: 4px;">No Classified Attacks</div>
+          <div style="font-size: 11px; color: var(--hn-text-faint);">Awaiting honeypot threat telemetry</div>
+        </div>
       </div>
     </div>
   </div>
@@ -153,6 +157,7 @@
     <div class="hn-panel">
       <div class="hn-panel-header">
         <span class="hn-panel-title">Attack Timeline (60 Minutes)</span>
+        <span style="font-size: 11px; color: var(--hn-text-faint); font-family: var(--hn-mono);">IST Timezone</span>
       </div>
       <div class="hn-panel-body" style="position: relative; height: 260px;">
         <canvas id="attackTimelineChart"></canvas>
@@ -166,8 +171,12 @@
         <span class="hn-panel-title">Geographic Threat Map</span>
         <a href="/dashboard/map" style="font-size: 11px; font-weight: 600;">Full Map &rarr;</a>
       </div>
-      <div class="hn-panel-body" style="height: 260px; padding: 0;">
-        <div id="overviewMap" style="height: 100%; width: 100%; background: #0D111B;"></div>
+      <div class="hn-panel-body" style="height: 260px; padding: 0; position: relative;">
+        <div id="overviewMap" style="height: 100%; min-height: 260px; width: 100%; background: #080B12;"></div>
+        <div id="overviewMapEmpty" style="display: none; position: absolute; inset: 0; background: rgba(8, 11, 18, 0.75); backdrop-filter: blur(2px); flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; pointer-events: none; z-index: 400;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--hn-text-dim); margin-bottom: 4px;">No Geographic Threat Markers</div>
+          <div style="font-size: 11px; color: var(--hn-text-faint);">Global sensors monitored; waiting for external coordinates</div>
+        </div>
       </div>
     </div>
   </div>
@@ -237,12 +246,61 @@
   let timelineChart = null;
   let leafletMap = null;
   let mapMarkers = [];
+  let currentDistribution = {};
+  let currentTimeline = [];
 
   function formatDuration(sec) {
     const h = String(Math.floor(sec / 3600)).padStart(2, '0');
     const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
     const s = String(sec % 60).padStart(2, '0');
     return `${h}:${m}:${s}`;
+  }
+
+  function formatAttackBadge(attackType) {
+    if (!attackType || attackType === 'NONE') {
+      return '<span class="hn-chip" style="background:rgba(255,255,255,0.05); color:var(--hn-text-dim); border:1px solid rgba(255,255,255,0.08);">Normal Traffic</span>';
+    }
+    const formatted = attackType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return `<span class="hn-chip hn-chip-new" style="background:rgba(255,87,34,0.15); color:#FF7043; border:1px solid rgba(255,87,34,0.3); font-weight:600;">${esc(formatted)}</span>`;
+  }
+
+  function updateOverviewThreatPulse(threat) {
+    if (!threat) return;
+    const lvlEl = document.getElementById('overviewThreatLevel');
+    const scEl = document.getElementById('overviewThreatScore');
+    const reasEl = document.getElementById('overviewThreatReasons');
+    const level = (threat.level || 'NORMAL').toUpperCase();
+    const score = threat.score !== undefined ? threat.score : 0;
+
+    if (lvlEl) {
+      lvlEl.textContent = level;
+      lvlEl.style.color = level === 'CRITICAL' ? 'var(--hn-sev-critical)' :
+                          level === 'HIGH' ? 'var(--hn-sev-high)' :
+                          level === 'ELEVATED' ? 'var(--hn-sev-elevated)' : 'var(--hn-sev-normal)';
+    }
+
+    if (scEl) {
+      scEl.textContent = `${score}/100`;
+      scEl.className = `hn-badge hn-badge-${level.toLowerCase()}`;
+    }
+
+    if (reasEl && Array.isArray(threat.reasons)) {
+      reasEl.innerHTML = threat.reasons.length
+        ? threat.reasons.map(r => `<div>• ${esc(r)}</div>`).join('')
+        : '<div>• Baseline visitor activity</div>';
+    }
+
+    // Also synchronize sidebar threat pulse
+    const sbLvl = document.getElementById('hnThreatPulseLevel');
+    const sbSc = document.getElementById('hnThreatPulseScore');
+    if (sbLvl) {
+      sbLvl.textContent = level;
+      sbLvl.style.color = lvlEl ? lvlEl.style.color : 'var(--hn-sev-normal)';
+    }
+    if (sbSc) {
+      sbSc.textContent = `${score}/100`;
+      sbSc.className = `hn-badge hn-badge-${level.toLowerCase()}`;
+    }
   }
 
   window.loadOverview = async function() {
@@ -258,30 +316,21 @@
       document.getElementById('kpiUptime').textContent = formatDuration(summary.kpis.uptime_seconds);
 
       // 2. Threat Pulse
-      const lvlEl = document.getElementById('overviewThreatLevel');
-      const scEl = document.getElementById('overviewThreatScore');
-      const reasEl = document.getElementById('overviewThreatReasons');
-
-      lvlEl.textContent = summary.threat.level;
-      lvlEl.style.color = summary.threat.level === 'CRITICAL' ? 'var(--hn-sev-critical)' :
-                          summary.threat.level === 'HIGH' ? 'var(--hn-sev-high)' :
-                          summary.threat.level === 'ELEVATED' ? 'var(--hn-sev-elevated)' : 'var(--hn-sev-normal)';
-
-      scEl.textContent = `${summary.threat.score}/100`;
-      scEl.className = `hn-badge hn-badge-${summary.threat.level.toLowerCase()}`;
-      reasEl.innerHTML = summary.threat.reasons.map(r => `<div>• ${esc(r)}</div>`).join('');
+      updateOverviewThreatPulse(summary.threat);
 
       // 3. Attack Distribution Doughnut Chart
-      renderDistChart(summary.distribution);
+      currentDistribution = summary.distribution || {};
+      renderDistChart(currentDistribution);
 
       // 4. Timeline Chart
-      renderTimelineChart(summary.timeline);
+      currentTimeline = summary.timeline || [];
+      renderTimelineChart(currentTimeline);
 
       // 5. Mini Map
       renderMiniMap();
 
       // 6. Top Attackers Table
-      renderTopAttackers(summary.top_attackers);
+      renderTopAttackers(summary.top_attackers || []);
 
       // 7. Load Recent Alerts & Events
       loadRecentAlerts();
@@ -293,33 +342,91 @@
   };
 
   function renderDistChart(dist) {
-    const ctx = document.getElementById('attackDistChart');
-    if (!ctx) return;
+    const canvas = document.getElementById('attackDistChart');
+    const emptyEl = document.getElementById('attackDistEmpty');
+    if (!canvas) return;
 
-    const labels = Object.keys(dist);
-    const data = Object.values(dist);
+    // Filter out NONE, empty, or non-numeric counts
+    const cleanDist = {};
+    if (dist && typeof dist === 'object') {
+      for (const [k, v] of Object.entries(dist)) {
+        if (k && k !== 'NONE' && typeof v === 'number' && v > 0) {
+          cleanDist[k] = v;
+        }
+      }
+    }
 
-    if (distChart) distChart.destroy();
+    const labels = Object.keys(cleanDist);
+    const data = Object.values(cleanDist);
+    const total = data.reduce((a, b) => a + b, 0);
 
-    distChart = new Chart(ctx, {
+    if (distChart) {
+      distChart.destroy();
+      distChart = null;
+    }
+
+    if (labels.length === 0 || total === 0) {
+      canvas.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'flex';
+      return;
+    }
+
+    canvas.style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const colors = [
+      '#FF5722', '#FF3D3D', '#FFB547', '#FF7043',
+      '#E040FB', '#00E5FF', '#29C995', '#FF9100',
+      '#B388FF', '#FF5252', '#00BCD4', '#8BC34A'
+    ];
+
+    const formattedLabels = labels.map(l => {
+      return l.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    });
+
+    distChart = new Chart(canvas, {
       type: 'doughnut',
       data: {
-        labels: labels.map(l => l.replace(/_/g, ' ')),
+        labels: formattedLabels,
         datasets: [{
-          data: data.length ? data : [1],
-          backgroundColor: data.length ? [
-            '#FF5722', '#FF8A65', '#FFB547', '#FF7043', '#FF3D3D', '#FF6B35', '#29C995', '#8A9BB5'
-          ] : ['#171D29'],
-          borderWidth: 0
+          data: data,
+          backgroundColor: colors.slice(0, data.length),
+          borderColor: '#101722',
+          borderWidth: 2,
+          hoverOffset: 4
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '65%',
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#A3ADBD', font: { size: 10 } } }
-        },
-        cutout: '68%'
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#A3ADBD',
+              boxWidth: 10,
+              boxHeight: 10,
+              padding: 8,
+              font: { size: 10, family: 'var(--hn-font, sans-serif)' }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(8, 11, 18, 0.95)',
+            titleColor: '#F3F5F9',
+            bodyColor: '#A3ADBD',
+            borderColor: '#293344',
+            borderWidth: 1,
+            padding: 8,
+            callbacks: {
+              label: function(ctx) {
+                const val = ctx.raw || 0;
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return ` ${ctx.label}: ${val} (${pct}%)`;
+              }
+            }
+          }
+        }
       }
     });
   }
@@ -328,34 +435,76 @@
     const ctx = document.getElementById('attackTimelineChart');
     if (!ctx) return;
 
-    const labels = timeline.map(b => b.t);
-    const criticalData = timeline.map(b => b.CRITICAL);
-    const highData = timeline.map(b => b.HIGH);
-    const elevatedData = timeline.map(b => b.ELEVATED);
-    const normalData = timeline.map(b => b.NORMAL);
+    if (timelineChart) {
+      timelineChart.destroy();
+      timelineChart = null;
+    }
 
-    if (timelineChart) timelineChart.destroy();
+    const safeTimeline = Array.isArray(timeline) && timeline.length ? timeline : [];
+    const labels = safeTimeline.map(b => b.t || '--:--');
+    const criticalData = safeTimeline.map(b => b.CRITICAL || 0);
+    const highData = safeTimeline.map(b => b.HIGH || 0);
+    const elevatedData = safeTimeline.map(b => b.ELEVATED || 0);
+    const normalData = safeTimeline.map(b => b.NORMAL || 0);
 
     timelineChart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [
-          { label: 'Critical', data: criticalData, backgroundColor: '#FF4545' },
-          { label: 'High', data: highData, backgroundColor: '#FF7043' },
-          { label: 'Elevated', data: elevatedData, backgroundColor: '#FFB547' },
-          { label: 'Normal', data: normalData, backgroundColor: '#29C995' }
+          { label: 'Critical', data: criticalData, backgroundColor: '#FF4545', borderRadius: 2 },
+          { label: 'High', data: highData, backgroundColor: '#FF7043', borderRadius: 2 },
+          { label: 'Elevated', data: elevatedData, backgroundColor: '#FFB547', borderRadius: 2 },
+          { label: 'Normal', data: normalData, backgroundColor: '#29C995', borderRadius: 2 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         scales: {
-          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6A7589', font: { size: 10 } } },
-          y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6A7589', font: { size: 10 } } }
+          x: {
+            stacked: true,
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              color: '#6A7589',
+              font: { size: 10 },
+              maxTicksLimit: 12
+            }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              color: '#6A7589',
+              font: { size: 10 },
+              precision: 0
+            }
+          }
         },
         plugins: {
-          legend: { position: 'top', labels: { color: '#A3ADBD', font: { size: 10 } } }
+          legend: {
+            position: 'top',
+            labels: {
+              color: '#A3ADBD',
+              boxWidth: 10,
+              boxHeight: 10,
+              font: { size: 10 }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(8, 11, 18, 0.95)',
+            titleColor: '#F3F5F9',
+            bodyColor: '#A3ADBD',
+            borderColor: '#293344',
+            borderWidth: 1,
+            callbacks: {
+              title: function(items) {
+                return items.length ? `Time: ${items[0].label} IST` : '';
+              }
+            }
+          }
         }
       }
     });
@@ -363,18 +512,29 @@
 
   function renderMiniMap() {
     const mapContainer = document.getElementById('overviewMap');
-    if (!mapContainer || leafletMap) return;
+    if (!mapContainer) return;
 
-    leafletMap = L.map('overviewMap', { zoomControl: false, attributionControl: false }).setView([20, 0], 1);
-    
+    if (leafletMap) {
+      setTimeout(() => leafletMap.invalidateSize(), 100);
+      fetchMapPoints();
+      return;
+    }
+
+    leafletMap = L.map('overviewMap', {
+      zoomControl: false,
+      attributionControl: false,
+      minZoom: 1,
+      maxZoom: 6
+    }).setView([20, 0], 1);
+
     fetch("{{ url_for('static', filename='vendor/world-countries.json') }}")
       .then(r => r.json())
       .then(geoData => {
         L.geoJSON(geoData, {
           style: {
-            fillColor: '#161F2C',
+            fillColor: '#121A27',
             fillOpacity: 0.95,
-            color: '#293344',
+            color: '#253043',
             weight: 0.75
           }
         }).addTo(leafletMap);
@@ -383,32 +543,79 @@
       .catch(() => {
         fetchMapPoints();
       });
+
+    window.addEventListener('resize', () => {
+      if (leafletMap) leafletMap.invalidateSize();
+    });
   }
 
   async function fetchMapPoints() {
     try {
-      const res = await API.getSummary();
       const pointsRes = await fetch('/api/map/points');
+      if (!pointsRes.ok) return;
       const pointsData = await pointsRes.json();
+      const emptyEl = document.getElementById('overviewMapEmpty');
 
-      if (leafletMap && pointsData.points) {
-        mapMarkers.forEach(m => m.remove());
-        mapMarkers = [];
-        pointsData.points.forEach(p => {
-          const color = p.max_risk >= 75 ? '#FF4545' : p.max_risk >= 50 ? '#FF7043' : '#29C995';
-          const marker = L.circleMarker([p.lat, p.lng], {
-            radius: Math.max(5, Math.min(14, p.attack_count)),
-            fillColor: color,
-            color: '#fff',
-            weight: 1,
-            fillOpacity: 0.8
-          }).addTo(leafletMap);
-          marker.bindPopup(`<b>${esc(p.ip)}</b><br>${esc(p.city)}, ${esc(p.country)}<br>Risk: ${p.max_risk}/100`);
-          mapMarkers.push(marker);
-        });
+      if (!leafletMap) return;
+
+      mapMarkers.forEach(m => m.remove());
+      mapMarkers = [];
+
+      const points = pointsData.points || [];
+      if (points.length === 0) {
+        if (emptyEl) emptyEl.style.display = 'flex';
+        return;
       }
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      points.forEach(p => {
+        const lat = parseFloat(p.lat);
+        const lng = parseFloat(p.lng);
+        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          return;
+        }
+
+        const color = p.max_risk >= 75 ? '#FF4545' : p.max_risk >= 50 ? '#FF7043' : p.max_risk >= 25 ? '#FFB547' : '#29C995';
+        const radius = Math.max(5, Math.min(13, Math.sqrt(p.attack_count || 1) * 3));
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: radius,
+          fillColor: color,
+          color: '#FFFFFF',
+          weight: 1,
+          fillOpacity: 0.85
+        }).addTo(leafletMap);
+
+        const simBadge = p.is_simulated
+          ? '<span style="font-size:9px; background:rgba(255,181,71,0.2); color:#FFB547; border:1px solid rgba(255,181,71,0.4); padding:1px 5px; border-radius:3px; margin-left:6px;">SIMULATED</span>'
+          : '<span style="font-size:9px; background:rgba(41,201,149,0.2); color:#29C995; border:1px solid rgba(41,201,149,0.4); padding:1px 5px; border-radius:3px; margin-left:6px;">VERIFIED</span>';
+
+        const popupContent = `
+          <div style="font-family:var(--hn-font, sans-serif); font-size:12px; min-width:180px; line-height:1.4;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+              <span style="font-family:var(--hn-mono); font-weight:700; color:var(--hn-accent);">${esc(p.ip)}</span>
+              ${simBadge}
+            </div>
+            <div style="color:#A3ADBD; margin-bottom:6px;">${esc(p.city || 'Unknown')}, ${esc(p.country || 'Unknown')}</div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+              <span style="color:#6A7589;">Top Attack:</span>
+              <span style="font-weight:600; color:#F3F5F9;">${esc(p.top_attack || 'Recon')}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+              <span style="color:#6A7589;">Total Events:</span>
+              <span style="font-family:var(--hn-mono); color:#F3F5F9;">${p.attack_count || 0}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11px;">
+              <span style="color:#6A7589;">Risk Score:</span>
+              <span style="font-weight:700; color:${color};">${p.max_risk || 0}/100</span>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent, { className: 'hn-country-tooltip' });
+        mapMarkers.push(marker);
+      });
     } catch (e) {
-      console.warn('Map points fetch skipped:', e);
+      console.warn('Map points fetch notice:', e);
     }
   }
 
@@ -425,7 +632,7 @@
       <tr onclick="window.location.href='/dashboard/attackers/${encodeURIComponent(a.ip)}'">
         <td class="mono" style="font-weight:600;">${esc(a.ip)}</td>
         <td>${esc(a.city)}, ${esc(a.country)}</td>
-        <td><span class="hn-chip hn-chip-new">${esc(a.top_attack)}</span></td>
+        <td>${formatAttackBadge(a.top_attack)}</td>
         <td>${formatRiskMeter(a.max_risk)}</td>
         <td class="mono">${a.total_events}</td>
       </tr>
@@ -470,7 +677,7 @@
         <tr onclick="openEventDetail('${ev.event_id}')">
           <td class="mono">${formatDate(ev.timestamp)}</td>
           <td class="mono" style="color:var(--hn-accent);">${esc(ev.source_ip)}</td>
-          <td><span class="hn-chip hn-chip-new">${esc(ev.attack_type)}</span></td>
+          <td>${formatAttackBadge(ev.attack_type)}</td>
           <td class="mono">${esc(ev.endpoint)}</td>
           <td>${formatSeverityBadge(ev.severity)}</td>
           <td>${formatRiskMeter(ev.risk_score)}</td>
@@ -484,7 +691,6 @@
     const tbody = document.getElementById('overviewStreamBody');
     if (!tbody) return;
 
-    // Remove empty placeholder row
     if (tbody.children.length === 1 && tbody.children[0].innerText.includes('Waiting for incoming')) {
       tbody.innerHTML = '';
     }
@@ -495,7 +701,7 @@
     row.innerHTML = `
       <td class="mono">${formatDate(eventDto.timestamp)}</td>
       <td class="mono" style="color:var(--hn-accent);">${esc(eventDto.source_ip)}</td>
-      <td><span class="hn-chip hn-chip-new">${esc(eventDto.attack_type)}</span></td>
+      <td>${formatAttackBadge(eventDto.attack_type)}</td>
       <td class="mono">${esc(eventDto.endpoint)}</td>
       <td>${formatSeverityBadge(eventDto.severity)}</td>
       <td>${formatRiskMeter(eventDto.risk_score)}</td>
@@ -504,9 +710,64 @@
     tbody.insertBefore(row, tbody.firstChild);
     if (tbody.children.length > 20) tbody.removeChild(tbody.lastChild);
 
-    // Update KPI counter
+    // Update KPI counter Total Events
     const totEl = document.getElementById('kpiTotalEvents');
-    if (totEl) totEl.textContent = (parseInt(totEl.textContent.replace(/,/g, '') || 0) + 1).toLocaleString();
+    if (totEl) {
+      totEl.textContent = (parseInt(totEl.textContent.replace(/,/g, '') || 0) + 1).toLocaleString();
+    }
+
+    // Dynamic Attack Distribution Update
+    if (eventDto.attack_type && eventDto.attack_type !== 'NONE') {
+      currentDistribution[eventDto.attack_type] = (currentDistribution[eventDto.attack_type] || 0) + 1;
+      renderDistChart(currentDistribution);
+    }
+
+    // Dynamic Timeline update
+    if (timelineChart && timelineChart.data && timelineChart.data.datasets) {
+      const dNow = new Date();
+      const istMinutes = String(dNow.getMinutes()).padStart(2, '0');
+      const istHours = String(dNow.getHours()).padStart(2, '0');
+      const timeStr = `${istHours}:${istMinutes}`;
+      const labels = timelineChart.data.labels;
+      let idx = labels.indexOf(timeStr);
+      if (idx === -1) {
+        labels.push(timeStr);
+        timelineChart.data.datasets.forEach(ds => ds.data.push(0));
+        idx = labels.length - 1;
+      }
+      const sev = (eventDto.severity || 'NORMAL').toUpperCase();
+      const dsIdx = sev === 'CRITICAL' ? 0 : sev === 'HIGH' ? 1 : sev === 'ELEVATED' ? 2 : 3;
+      if (timelineChart.data.datasets[dsIdx]) {
+        timelineChart.data.datasets[dsIdx].data[idx] = (timelineChart.data.datasets[dsIdx].data[idx] || 0) + 1;
+        timelineChart.update('none');
+      }
+    }
+  });
+
+  SocketBus.on('new_attack', (attackData) => {
+    // Refresh Top Attackers and Map on verified new attacks
+    fetchMapPoints();
+  });
+
+  SocketBus.on('threat_level_update', (pulse) => {
+    updateOverviewThreatPulse(pulse);
+  });
+
+  SocketBus.on('kpi_update', (kpis) => {
+    if (!kpis) return;
+    const totEl = document.getElementById('kpiTotalEvents');
+    const actAtkEl = document.getElementById('kpiActiveAttackers');
+    const actSessEl = document.getElementById('kpiActiveSessions');
+    const critEl = document.getElementById('kpiCriticalAlerts');
+    const avgRiskEl = document.getElementById('kpiAvgRisk');
+    const uptimeEl = document.getElementById('kpiUptime');
+
+    if (totEl && kpis.total_events !== undefined) totEl.textContent = kpis.total_events.toLocaleString();
+    if (actAtkEl && kpis.active_attackers !== undefined) actAtkEl.textContent = kpis.active_attackers;
+    if (actSessEl && kpis.active_sessions !== undefined) actSessEl.textContent = kpis.active_sessions;
+    if (critEl && kpis.high_critical_alerts !== undefined) critEl.textContent = kpis.high_critical_alerts;
+    if (avgRiskEl && kpis.avg_risk !== undefined) avgRiskEl.textContent = kpis.avg_risk;
+    if (uptimeEl && kpis.uptime_seconds !== undefined) uptimeEl.textContent = formatDuration(kpis.uptime_seconds);
   });
 
   SocketBus.on('new_alert', () => {

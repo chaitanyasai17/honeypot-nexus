@@ -113,6 +113,39 @@ class EventProcessor:
                 engagement_score, eng_reasons = calculate_engagement(session, raw, meta)
                 severity = self._compute_severity(event_risk, detections, session_risk)
 
+                # If no rule triggered directly but event represents a blocked/prevented attack attempt:
+                if not detections:
+                    from app.detection.patterns import RECON_PATHS
+                    ev_type = raw.get("event_type")
+                    ep = (raw.get("endpoint") or "").lower()
+                    if ev_type == "blocked_request":
+                        if "/shell" in ep:
+                            primary_attack = "SHELL_RECON"
+                        elif "/database" in ep:
+                            primary_attack = "SQL_INJECTION"
+                        elif "/files" in ep:
+                            primary_attack = "DIRECTORY_TRAVERSAL"
+                        elif "/login" in ep:
+                            primary_attack = "BRUTE_FORCE"
+                        elif "/api" in ep:
+                            primary_attack = "SUSPICIOUS_API"
+                        elif any(ep.startswith(p) for p in RECON_PATHS):
+                            primary_attack = "RECONNAISSANCE"
+                        elif session.attack_types_json:
+                            primary_attack = max(session.attack_types_json.items(), key=lambda x: x[1])[0]
+                        else:
+                            primary_attack = "RECONNAISSANCE"
+                        event_risk = max(event_risk, min(100, max(50, session.risk_score)))
+                        severity = "CRITICAL" if session.risk_score >= 75 else "HIGH"
+                    elif ev_type == "rate_limited":
+                        primary_attack = "AUTOMATED_ENUMERATION"
+                        event_risk = max(event_risk, 35)
+                        severity = "ELEVATED"
+                    elif ev_type == "payload_oversized":
+                        primary_attack = "SCANNER"
+                        event_risk = max(event_risk, 30)
+                        severity = "ELEVATED"
+
                 # Update session counters and metadata
                 session.event_count += 1
                 session.last_seen = utc_now()

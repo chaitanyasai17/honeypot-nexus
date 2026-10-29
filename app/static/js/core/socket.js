@@ -5,11 +5,13 @@ class SocketManager {
   constructor() {
     this.socket = null;
     this.handlers = new Map();
-    this.statusEl = document.getElementById('hnLiveIndicator');
-    this.statusTextEl = document.getElementById('hnLiveText');
   }
 
   init() {
+    if (this.socket) {
+      return; // Already initialized
+    }
+
     if (typeof io === 'undefined') {
       console.warn('Socket.IO client library not loaded. Real-time updates paused.');
       this.setStatus('offline', 'OFFLINE (No SocketIO)');
@@ -36,6 +38,10 @@ class SocketManager {
       this.setStatus('reconnecting', 'RECONNECTING');
     });
 
+    this.socket.on('connect_error', () => {
+      this.setStatus('reconnecting', 'RECONNECTING');
+    });
+
     // Default global handlers
     this.socket.on('new_alert', (alert) => {
       showToast(
@@ -57,11 +63,15 @@ class SocketManager {
   }
 
   setStatus(state, label) {
-    if (this.statusEl) {
-      this.statusEl.className = `hn-dot hn-dot-${state}`;
+    const statusEl = document.getElementById('hnLiveIndicator');
+    const statusTextEl = document.getElementById('hnLiveText');
+    if (statusEl) {
+      statusEl.className = `hn-dot hn-dot-${state}`;
     }
-    if (this.statusTextEl) {
-      this.statusTextEl.textContent = label;
+    if (statusTextEl) {
+      statusTextEl.textContent = label;
+      statusTextEl.style.color = state === 'live' ? 'var(--hn-ok)' :
+                                 state === 'reconnecting' ? 'var(--hn-warn)' : 'var(--hn-down)';
     }
   }
 
@@ -69,7 +79,20 @@ class SocketManager {
     if (!this.handlers.has(eventName)) {
       this.handlers.set(eventName, []);
     }
-    this.handlers.get(eventName).push(callback);
+    const list = this.handlers.get(eventName);
+    if (!list.includes(callback)) {
+      list.push(callback);
+    }
+  }
+
+  off(eventName, callback) {
+    if (!this.handlers.has(eventName)) return;
+    if (!callback) {
+      this.handlers.delete(eventName);
+    } else {
+      const list = this.handlers.get(eventName).filter(cb => cb !== callback);
+      this.handlers.set(eventName, list);
+    }
   }
 
   _dispatch(eventName, data) {

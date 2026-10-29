@@ -215,21 +215,39 @@
     // Initialize Socket.IO
     SocketBus.init();
 
-    // Listen for Threat Pulse updates
-    SocketBus.on('threat_level_update', (pulse) => {
+    function updateSidebarThreatPulse(pulse) {
+      if (!pulse) return;
       const lvl = document.getElementById('hnThreatPulseLevel');
       const sc = document.getElementById('hnThreatPulseScore');
+      const level = (pulse.level || 'NORMAL').toUpperCase();
+      const score = pulse.score !== undefined ? pulse.score : 0;
       if (lvl) {
-        lvl.textContent = pulse.level;
-        lvl.style.color = pulse.level === 'CRITICAL' ? 'var(--hn-sev-critical)' :
-                          pulse.level === 'HIGH' ? 'var(--hn-sev-high)' :
-                          pulse.level === 'ELEVATED' ? 'var(--hn-sev-elevated)' : 'var(--hn-sev-normal)';
+        lvl.textContent = level;
+        lvl.style.color = level === 'CRITICAL' ? 'var(--hn-sev-critical)' :
+                          level === 'HIGH' ? 'var(--hn-sev-high)' :
+                          level === 'ELEVATED' ? 'var(--hn-sev-elevated)' : 'var(--hn-sev-normal)';
       }
       if (sc) {
-        sc.textContent = `${pulse.score}/100`;
-        sc.className = `hn-badge hn-badge-${pulse.level.toLowerCase()}`;
+        sc.textContent = `${score}/100`;
+        sc.className = `hn-badge hn-badge-${level.toLowerCase()}`;
       }
+    }
+
+    // Listen for Threat Pulse updates
+    SocketBus.on('threat_level_update', (pulse) => {
+      updateSidebarThreatPulse(pulse);
     });
+
+    // Synchronize initial Threat Pulse on load
+    async function initSidebarThreatPulse() {
+      try {
+        const summary = await API.getSummary();
+        if (summary && summary.threat) {
+          updateSidebarThreatPulse(summary.threat);
+        }
+      } catch (e) {}
+    }
+    initSidebarThreatPulse();
 
     // Demo Drawer
     window.openDemoDrawer = function() {

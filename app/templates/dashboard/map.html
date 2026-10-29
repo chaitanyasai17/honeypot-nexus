@@ -718,6 +718,13 @@
           <div class="hn-hud-label">Average Risk</div>
           <div class="hn-hud-value high" id="hudAvgRisk">--</div>
         </div>
+
+        <div class="hn-hud-card">
+          <div class="hn-hud-label">GeoIP Source</div>
+          <div class="hn-hud-value" style="font-size:11px; font-weight:700; margin-top:4px;" id="hudGeoSource">
+            <span style="color:#FFB547;">SIMULATED</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1118,6 +1125,14 @@
         document.getElementById('hudTotalAttacks').textContent = data.stats.total_events;
         document.getElementById('hudCriticalCount').textContent = data.stats.critical_count;
         document.getElementById('hudAvgRisk').textContent = `${data.stats.avg_risk}/100`;
+        const hudGeo = document.getElementById('hudGeoSource');
+        if (hudGeo && data.stats.geoip_provider) {
+          if (data.stats.is_mock_provider) {
+            hudGeo.innerHTML = `<span style="color:#FFB547;">SIMULATED</span>`;
+          } else {
+            hudGeo.innerHTML = `<span style="color:#29C995;">MAXMIND MMDB</span>`;
+          }
+        }
       }
 
       // Render Visual Overlays
@@ -1226,7 +1241,12 @@
 
           <div class="hn-popup-item">
             <span class="label">Location</span>
-            <span class="val">${esc(p.city)}, ${esc(p.country)}</span>
+            <span class="val">
+              ${esc(p.city)}, ${esc(p.country)}
+              ${p.is_simulated || p.source === 'mock' 
+                ? '<span style="display:inline-block; font-size:9px; padding:1px 4px; border-radius:3px; background:rgba(255,181,71,0.18); color:#FFB547; border:1px solid rgba(255,181,71,0.4); margin-left:4px; font-weight:700;">SIMULATED</span>' 
+                : '<span style="display:inline-block; font-size:9px; padding:1px 4px; border-radius:3px; background:rgba(41,201,149,0.18); color:#29C995; border:1px solid rgba(41,201,149,0.4); margin-left:4px; font-weight:700;">MAXMIND</span>'}
+            </span>
           </div>
 
           <div class="hn-popup-item">
@@ -1262,6 +1282,7 @@
 
         <div style="font-size:11px; color:var(--hn-text-dim); margin-bottom:12px;">
           ISP: ${esc(p.isp || 'Synthetic Provider')} (${esc(p.asn || 'AS0')})
+          ${p.is_simulated || p.source === 'mock' ? ' • <span style="color:#FFB547; font-weight:600;">(Synthetic RFC-5737)</span>' : ''}
           ${p.vpn ? ' • <span style="color:#f59e0b; font-weight:700;">VPN Node</span>' : ''}
           ${p.tor ? ' • <span style="color:#ef4444; font-weight:700;">Tor Exit</span>' : ''}
         </div>

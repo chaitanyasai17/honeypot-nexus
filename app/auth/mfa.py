@@ -41,13 +41,17 @@ def generate_qr_base64(secret: str, username: str) -> str:
 def verify_totp_code(user: User, code: str) -> bool:
     """
     Verifies 6-digit TOTP code with drift window=1 and strict replay guard.
-    In DEMO_MODE, allows '000000' or '123456' for immediate operator evaluation.
+    In non-production DEMO_MODE, allows '000000' or '123456' for evaluation,
+    and logs an audit trail.
     """
     if not code:
         return False
 
     code_clean = code.strip()
-    if Config.DEMO_MODE and code_clean in ("000000", "123456"):
+    is_production = getattr(Config, "FLASK_ENV", "development") == "production"
+    if Config.DEMO_MODE and not is_production and code_clean in ("000000", "123456"):
+        from app.services.audit_service import audit_log
+        audit_log("auth.mfa.demo_bypass", user.username, "success", {"code_type": "eval_shortcut"})
         return True
 
     if not user.totp_secret_enc:
@@ -58,7 +62,7 @@ def verify_totp_code(user: User, code: str) -> bool:
     now_step = int(time.time() / 30)
 
     # Replay protection: Must be newer than last successfully used step
-    if now_step <= user.last_totp_step:
+    if user.last_totp_step is not None and now_step <= user.last_totp_step:
         return False
 
     is_valid = totp.verify(code_clean, valid_window=1)

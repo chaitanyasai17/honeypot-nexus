@@ -3,13 +3,16 @@ Honeypot Nexus - WebSocket Communication Service (/soc namespace)
 Broadcasts live telemetry, threat level updates, and security alerts to connected SOC analysts.
 """
 
+import hashlib
 from datetime import datetime, timezone
 from typing import List, Dict, Any
-from flask import request
+from flask import request, session
 from flask_socketio import emit
 from app.extensions import socketio
 from app.logging_config import get_logger
 from app.utils.timezone import to_utc_iso, now_utc
+from app.auth.security import get_authenticated_user, ROLE_HIERARCHY
+from app.models.models import AdminSession, utc_now
 
 logger = get_logger("app")
 _seq_counter = 0
@@ -129,12 +132,73 @@ def broadcast_pipeline_updates(event_model, session, detections, alerts: list):
         }
         socketio.emit("new_alert", alert_dto, namespace="/soc")
 
+    # 6. Emit threat_level_update (Global Threat Pulse)
+    from app.services.stats_service import get_threat_pulse, get_kpis
+    try:
+        pulse = get_threat_pulse()
+        socketio.emit("threat_level_update", {
+            "score": pulse["score"],
+            "level": pulse["level"],
+            "reasons": pulse["reasons"],
+            "seq": _next_seq(),
+            "ts": now_iso
+        }, namespace="/soc")
+
+        # 7. Emit kpi_update (Live KPI Counter synchronization)
+        kpis = get_kpis()
+        socketio.emit("kpi_update", {
+            **kpis,
+            "seq": _next_seq(),
+            "ts": now_iso
+        }, namespace="/soc")
+    except Exception as stat_err:
+        logger.warning(f"Failed to broadcast live threat/kpi update: {stat_err}")
+
+
+def authenticate_socket_client(auth=None):
+    """
+    Authenticates WebSocket connection against active admin session:
+    1. Flask session cookie (session['soc_token'])
+    2. Socket.IO auth dictionary (auth['token'])
+    3. Query parameter (?token=...)
+    """
+    # 1. Check Flask session cookie
+    user = get_authenticated_user()
+    if user:
+        return user
+
+    # 2. Check auth dict or query param
+    token = None
+    if isinstance(auth, dict) and auth.get("token"):
+        token = auth.get("token")
+    elif request and request.args and request.args.get("token"):
+        token = request.args.get("token")
+
+    if token and isinstance(token, str):
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        admin_sess = AdminSession.query.filter_by(id=token_hash).first()
+        if admin_sess and admin_sess.revoked_at is None:
+            expires = admin_sess.expires_at
+            if expires.tzinfo is not None:
+                expires = expires.astimezone(timezone.utc).replace(tzinfo=None)
+            if expires >= utc_now():
+                return admin_sess.user
+
+    return None
+
 
 # Register SocketIO event handlers on /soc namespace
 @socketio.on("connect", namespace="/soc")
-def handle_soc_connect():
-    logger.info("SOC Analyst connected to live telemetry stream (/soc)")
-    emit("server_notice", {"level": "info", "text": "Connected to Honeypot Nexus Live Stream"})
+def handle_soc_connect(auth=None):
+    user = authenticate_socket_client(auth)
+    if not user or user.role not in ROLE_HIERARCHY:
+        client_ip = request.remote_addr if request else "unknown"
+        logger.warning(f"Unauthorized WebSocket connection attempt to /soc from {client_ip}")
+        return False
+
+    logger.info(f"SOC Analyst ({user.username}, role={user.role}) connected to live telemetry stream (/soc)")
+    emit("server_notice", {"level": "info", "text": f"Connected to Honeypot Nexus Live Stream as {user.username}"})
+    return True
 
 
 @socketio.on("disconnect", namespace="/soc")

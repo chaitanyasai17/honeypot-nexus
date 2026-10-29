@@ -43,7 +43,7 @@ class BruteForceRule(BaseDetectionRule):
             window_s
         )
 
-        if fail_count >= threshold and (fail_count % threshold == 0 or fail_count == threshold):
+        if fail_count >= threshold:
             return [Detection(
                 rule_id=self.rule_id,
                 attack_type=self.attack_type,
@@ -401,7 +401,15 @@ class ShellCommandRule(BaseDetectionRule):
                 evidence={"commands_count": recon_cmds, "last_command": cmd}
             )]
 
-        return []
+        # Any interaction with synthetic terminal shell is shell reconnaissance
+        return [Detection(
+            rule_id=self.rule_id,
+            attack_type=self.attack_type,
+            severity=Severity.ELEVATED,
+            points=15,
+            reason=f"Synthetic terminal shell command execution: '{cmd[:60]}'",
+            evidence={"command": cmd, "category": cmd_cat}
+        )]
 
 
 # 10. R-FILE-001: Sensitive File Rule

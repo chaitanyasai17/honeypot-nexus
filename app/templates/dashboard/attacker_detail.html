@@ -11,6 +11,11 @@
       {{ profile.geo_record.city if profile.geo_record else 'Unknown' }},
       {{ profile.geo_record.country if profile.geo_record else 'Unknown' }} •
       ASN: {{ profile.geo_record.asn if profile.geo_record else 'None' }} ({{ profile.geo_record.isp if profile.geo_record else 'Unknown' }})
+      {% if profile.geo_record and profile.geo_record.source == 'mock' %}
+      • <span style="background: rgba(255,181,71,0.15); color: #FFB547; border: 1px solid rgba(255,181,71,0.4); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;">SIMULATED RFC-5737</span>
+      {% elif profile.geo_record and profile.geo_record.source == 'maxmind' %}
+      • <span style="background: rgba(41,201,149,0.15); color: #29C995; border: 1px solid rgba(41,201,149,0.4); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;">MAXMIND VERIFIED</span>
+      {% endif %}
     </div>
   </div>
   <div>

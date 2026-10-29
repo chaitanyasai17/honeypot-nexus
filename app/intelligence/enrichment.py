@@ -43,6 +43,9 @@ class EnrichmentService:
                     "vpn": cached_db.vpn,
                     "tor": cached_db.tor,
                     "source": cached_db.source,
+                    "is_simulated": (cached_db.source == "mock" and cached_db.country != "Unknown"),
+                    "approximate": (cached_db.source == "mock"),
+                    "note": "Cached GeoIP record"
                 }
                 if len(self._memory_cache) < 2048:
                     self._memory_cache[ip] = result
@@ -75,6 +78,9 @@ class EnrichmentService:
             "vpn": vpn_detected,
             "tor": tor_detected,
             "source": geo_res.source,
+            "is_simulated": geo_res.is_simulated,
+            "approximate": geo_res.approximate,
+            "note": geo_res.note
         }
 
         # 4. Save to DB cache
@@ -115,3 +121,8 @@ def get_enrichment_service() -> EnrichmentService:
     if _enrichment_instance is None:
         _enrichment_instance = EnrichmentService()
     return _enrichment_instance
+
+
+def enrich_ip(ip: str) -> Dict[str, Any]:
+    """Convenience helper to enrich an IP address."""
+    return get_enrichment_service().enrich(ip)

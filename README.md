@@ -4,7 +4,8 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
 [![Security Tested](https://img.shields.io/badge/security-AST%20Isolated-success.svg)](#security-guarantees)
-[![Test Suite](https://img.shields.io/badge/pytest-19%20passed-brightgreen.svg)](#automated-testing)
+[![Test Suite](https://img.shields.io/badge/pytest-50%20passed-brightgreen.svg)](#automated-testing)
+[![Live Site Verification](https://img.shields.io/badge/live%20e2e-36%20passed-brightgreen.svg)](#automated-testing)
 [![Architecture](https://img.shields.io/badge/architecture-3--Layer%20Deception-blueviolet.svg)](#system-architecture)
 
 **Honeypot Nexus** is an enterprise-grade defensive deception platform and Security Operations Center (SOC) visualization system. It deploys a convincing, synthetic corporate web portal (**SecureCorp Inc.**) on port 8080 to attract adversarial probing, processes every interaction through an HMAC-signed in-process EventBus, executes deterministic rule-based attack detection and explainable risk scoring, and streams live telemetry over WebSockets to an authenticated, dark-themed SOC dashboard on port 5000.
@@ -67,6 +68,14 @@ Honeypot Nexus is engineered with strict **three-layer architectural isolation**
   - `R-RECON-001` — Discovery Probes (sensitive bait endpoints)
   - `R-API-001` — Suspicious API Activity (unauthorized scopes, mutating methods)
   - `R-ENUM-001` — Automated Rate Anomaly & 404 Error Bursts
+  - `R-CMD-001` — Malicious Shell Command Ingestion (safe containment)
+  - `R-ENG-001` — Engagement Scoring & Actor Intent Profiling
+
+- **Integrated Application-Level Attack Prevention Layer:**
+  - **Request Rate Limiting:** Flask-Limiter enforcing configurable thresholds (`RATE_LIMIT_DEFAULT=120/min`, `RATE_LIMIT_HONEYPOT=60/min`, `RATE_LIMIT_LOGIN=5/min`). Returns HTTP 429 when exceeded.
+  - **Brute-Force & Lockout Protection:** Automatically locks out threat actors targeting authentication surfaces after 5 failed attempts for 15 minutes, returning anti-enumeration generic notices.
+  - **Automated & Manual IP Blocking:** High-risk threat actors exceeding risk score 85 or 6 sustained attack events are automatically quarantined with persistent SQLite audit records. Loopback protection (`127.0.0.1`, `::1`) prevents accidental self-lockout.
+  - **Payload Size Clamping:** Enforces strict 64 KB maximum request content bounds, returning HTTP 413 Payload Too Large to prevent buffer exhaustion.
   - `R-SHELL-001` — Terminal Reconnaissance & Tool Execution Detection
   - `R-FILE-001` — Sensitive Credential / Key / Database Backup Access
 
@@ -140,16 +149,22 @@ Access the interfaces in your browser:
 
 ---
 
-## 🧪 Automated Testing
+## 🧪 Automated Testing & Live Verification
 
-Run the full automated test suite (unit, security invariants, and integration):
+1. **Run the full regression test suite (50 automated unit, security invariant, and prevention tests):**
 ```bash
 python -m pytest -v
 ```
 
-Run the AST-based honeypot isolation verification:
+2. **Verify Layer 1 architectural isolation (AST-based static import analysis):**
 ```bash
 python scripts/check_isolation.py
+```
+
+3. **Run comprehensive live end-to-end integration verification (36 live HTTP & WebSocket checks):**
+```bash
+# Start server in background first if not already running: python run.py
+python scripts/test_site_full.py
 ```
 
 ---

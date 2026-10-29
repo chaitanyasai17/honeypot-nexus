@@ -34,7 +34,7 @@ SCANNER_UA_PATTERN = re.compile(
 RECON_PATHS = [
     "/robots.txt", "/sitemap.xml", "/.git", "/.env", "/.svn",
     "/server-status", "/phpinfo.php", "/wp-login.php", "/wp-admin",
-    "/administrator", "/phpmyadmin", "/backup", "/config", "/old",
+    "/administrator", "/admin", "/backup", "/config", "/old",
     "/dev", "/test", "/internal", "/uploads"
 ]
 
