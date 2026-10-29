@@ -70,6 +70,23 @@ class EventBus:
         """Computes HMAC-SHA256 signature for envelope payload."""
         return hmac.new(self.hmac_key, canonical_payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
+    def _record_dead_letter(self, reason: str, envelope: Optional[BusEnvelope] = None, raw_data: Optional[dict] = None):
+        """Appends unprocessable, rejected, or dropped events to dead_letter.jsonl."""
+        try:
+            from pathlib import Path
+            log_path = Path("dead_letter.jsonl")
+            entry = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "reason": reason,
+                "envelope_id": envelope.envelope_id if envelope else None,
+                "seq": envelope.seq if envelope else None,
+                "payload": envelope.payload_json if envelope else (json.dumps(raw_data, default=str) if raw_data else None)
+            }
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception as dl_err:
+            logger.warning(f"Could not write to dead_letter.jsonl: {dl_err}")
+
     def verify_envelope(self, envelope: BusEnvelope) -> bool:
         """Verifies envelope HMAC signature."""
         expected = self._sign_payload(envelope.payload_json)
@@ -116,6 +133,7 @@ class EventBus:
             except queue.Full:
                 with self._lock:
                     self._dropped += 1
+                self._record_dead_letter("queue_full", envelope=envelope)
                 logger.warning("EventBus queue full; dropped incoming event")
                 return PublishResult(accepted=False, reason="Queue is full")
 
@@ -123,6 +141,7 @@ class EventBus:
             with self._lock:
                 self._rejected += 1
                 self._last_error = str(e)
+            self._record_dead_letter(f"publish_rejected: {e}")
             logger.error(f"Unexpected error in publish: {e}", exc_info=True)
             return PublishResult(accepted=False, reason=str(e))
 
@@ -140,8 +159,8 @@ class EventBus:
                 if not self.verify_envelope(envelope):
                     with self._lock:
                         self._rejected += 1
+                    self._record_dead_letter("hmac_verification_failed", envelope=envelope)
                     logger.error(f"Envelope {envelope.envelope_id} failed HMAC signature verification! Dropping.")
-                    self.queue.task_done()
                     continue
 
                 # Run each subscriber stage sequentially
@@ -151,6 +170,7 @@ class EventBus:
                     except Exception as stage_err:
                         with self._lock:
                             self._last_error = f"{name}: {stage_err}"
+                        self._record_dead_letter(f"stage_failure_{name}: {stage_err}", envelope=envelope)
                         app_logger.error(f"Stage '{name}' failed on envelope {envelope.envelope_id}: {stage_err}", exc_info=True)
 
                 with self._lock:

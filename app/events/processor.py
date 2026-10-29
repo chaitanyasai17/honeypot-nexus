@@ -51,6 +51,14 @@ class EventProcessor:
                 # 1. Parse raw payload
                 raw = json.loads(envelope.payload_json)
 
+                # Duplicate submission check
+                raw_event_id = raw.get("event_id")
+                if raw_event_id:
+                    existing_ev = HoneypotEventModel.query.filter_by(event_id=raw_event_id).first()
+                    if existing_ev:
+                        logger.info(f"Duplicate event_id '{raw_event_id}' received; ignoring duplicate submission.")
+                        return
+
                 # 2. Stage: Normalize & password redaction
                 meta = raw.get("meta", {}).copy()
                 transient = raw.get("transient", {})

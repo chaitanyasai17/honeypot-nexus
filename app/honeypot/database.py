@@ -26,6 +26,35 @@ def database_viewer():
     error = None
 
     if query_str:
+        # Check query length boundary
+        if len(query_str) > 2000:
+            error = "1118 (42000): Query length exceeds maximum allowed packet size (2000 characters)"
+            capture_interaction(
+                surface=SurfaceType.database,
+                event_type=EventType.db_query,
+                status=EventStatus.error,
+                payload=query_str[:2000],
+                meta={
+                    "db_table": table_name,
+                    "db_query": query_str[:500],
+                    "had_syntax_error": True,
+                    "reason": "query_length_exceeded"
+                },
+                http_status=400
+            )
+            headers = list(table_data[0].keys()) if table_data else []
+            resp = make_response(render_template(
+                "honeypot/database.html",
+                company=COMPANY_NAME,
+                tables=available_tables,
+                current_table=table_name,
+                query=query_str[:200],
+                results=[],
+                headers=headers,
+                error=error
+            ), 400)
+            return attach_session_cookie(resp)
+
         q_lower = query_str.lower()
 
         # Check for simulated SQL syntax error (e.g. unclosed quote)

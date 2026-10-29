@@ -33,12 +33,28 @@ def sample_system_health() -> Dict[str, Any]:
     bus_status = bus_stats.status if bus_stats else "operational"
     q_depth = bus_stats.queue_depth if bus_stats else 0
 
+    # Prevention Service health
+    from app.services.prevention_service import get_prevention_service
+    prev_svc = current_app.extensions.get("prevention_service") or get_prevention_service()
+    prev_status = "operational" if prev_svc else "degraded"
+
+    # GeoIP Engine health
+    from app.intelligence.enrichment import get_enrichment_service
+    enrich_svc = get_enrichment_service()
+    geoip_status = "operational" if enrich_svc and enrich_svc.provider else "degraded"
+
+    # WebSocket Server health
+    socketio_ext = current_app.extensions.get("socketio")
+    ws_status = "operational" if socketio_ext else "degraded"
+
     services = [
         {"name": "Public Honeypot HTTP (Port 8080)", "status": "operational"},
         {"name": "Private SOC Dashboard (Port 5000)", "status": "operational"},
+        {"name": "Database Layer (SQLite)", "status": db_status},
         {"name": "Event Processing Pipeline", "status": bus_status},
-        {"name": "Real-time Telemetry WebSocket", "status": "operational"},
-        {"name": "GeoIP Intelligence Engine", "status": "operational"}
+        {"name": "Attack Prevention Engine", "status": prev_status},
+        {"name": "Real-time Telemetry WebSocket", "status": ws_status},
+        {"name": "GeoIP Intelligence Engine", "status": geoip_status}
     ]
 
     return {
